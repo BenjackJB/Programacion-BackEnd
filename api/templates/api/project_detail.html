@@ -1,0 +1,20 @@
+{% extends 'api/base.html' %}
+{% block title %}{{ project.name }} - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h2>{{ project.name }}</h2>
+        <p>{{ project.description|default_if_none:"(sin descripción)" }}</p>
+        <p><strong>Periodo:</strong>
+          {% if project.start_date %}{{ project.start_date }}{% else %} - {% endif %}
+          to
+          {% if project.end_date %}{{ project.end_date }}{% else %} - {% endif %}
+        </p>
+        <p><strong>Owner:</strong> <a href="{% url 'programmer_detail' project.owner.pk %}">{{ project.owner.fullname }}</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
