@@ -19,13 +19,13 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
-            <li class="nav-item"><a class="nav-link" href="/admin/">Login</a></li>
+            <li class="nav-item"><a class="nav-link" href="/django-admin/">Login</a></li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="programmersDropdown" role="button" data-bs-toggle="dropdown">
                 Programmers
               </a>
               <ul class="dropdown-menu" aria-labelledby="programmersDropdown">
-                <li><a class="dropdown-item" href="/api/programmers/">Ver Programadores</a></li>
+                <li><a class="dropdown-item" href="/admin/programmer/">Ver Programadores</a></li>
                 <li><a class="dropdown-item" href="{% url 'programmer_create' %}">+ Agregar</a></li>
               </ul>
             </li>
@@ -34,7 +34,7 @@
                 Projects
               </a>
               <ul class="dropdown-menu" aria-labelledby="projectsDropdown">
-                <li><a class="dropdown-item" href="/api/projects/">Ver Proyectos</a></li>
+                <li><a class="dropdown-item" href="/admin/project/">Ver Proyectos</a></li>
                 <li><a class="dropdown-item" href="{% url 'project_create' %}">+ Agregar</a></li>
               </ul>
             </li>
@@ -43,7 +43,7 @@
                 Skills
               </a>
               <ul class="dropdown-menu" aria-labelledby="skillsDropdown">
-                <li><a class="dropdown-item" href="/api/skills/">Ver Habilidades</a></li>
+                <li><a class="dropdown-item" href="/admin/skill/">Ver Habilidades</a></li>
                 <li><a class="dropdown-item" href="{% url 'skill_create' %}">+ Agregar</a></li>
               </ul>
             </li>
