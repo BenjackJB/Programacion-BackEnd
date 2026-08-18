@@ -31,6 +31,27 @@ class SkillViewSet(viewsets.ModelViewSet):
 
 
 # --- HTML template views ---
+def landing_page(request):
+    """Vista de la página principal (landing page)"""
+    return render(request, 'landing_page.html')
+
+
+def contact_message(request):
+    """Vista para procesar mensajes de contacto"""
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        email = request.POST.get('email')
+        asunto = request.POST.get('asunto')
+        mensaje = request.POST.get('mensaje')
+        
+        # Aquí puedes procesar el mensaje (guardar en BD, enviar email, etc.)
+        # Por ahora solo mostraremos un mensaje de éxito
+        messages.success(request, '¡Mensaje enviado exitosamente! Nos pondremos en contacto pronto.')
+        return redirect('/')
+    
+    return render(request, 'landing_page.html')
+
+
 @login_required(login_url='/accounts/login/')
 def admin_home(request):
     return render(request, 'admin_home.html')

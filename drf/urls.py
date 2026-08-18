@@ -5,7 +5,8 @@ from django.views.generic.base import RedirectView
 from api import views
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    path('', views.landing_page, name='landing_page'),
+    path('contacto/', views.contact_message, name='contact_message'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', views.admin_home, name='admin_home'),
     path('admin/programmer/', views.programmers_table, name='programmers_table'),
