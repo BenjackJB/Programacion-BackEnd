@@ -1,0 +1,23 @@
+{% extends 'api/base.html' %}
+{% block title %}Projects - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-3">Projects</h1>
+  </div>
+  {% for pr in projects %}
+  <div class="col-md-6 mb-3">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ pr.name }}</h5>
+        <p class="mb-1 text-truncate">{{ pr.description|default_if_none:"(sin descripción)" }}</p>
+        <p class="mb-1"><strong>Owner:</strong> {{ pr.owner.fullname }}</p>
+        <a href="{% url 'project_detail' pr.pk %}" class="btn btn-sm btn-primary mt-2">Ver proyecto</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><p class="text-muted">No hay proyectos todavía.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -159,7 +159,10 @@
         const actions = {% if user.is_superuser %}`
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-course" data-id="${course.id}"><i class="bi bi-pencil"></i></button>
+<<<<<<< HEAD
                 <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-course" data-id="${course.id}" data-active="${course.activo}" title="${course.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${course.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                 <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-course" data-id="${course.id}"><i class="bi bi-trash"></i></button>
             </td>
         `{% else %}`<td></td>`{% endif %};
@@ -215,9 +218,12 @@
             document.querySelectorAll('.delete-course').forEach(button => {
                 button.addEventListener('click', () => deleteCourse(button.dataset.id));
             });
+<<<<<<< HEAD
             document.querySelectorAll('.toggle-course').forEach(button => {
                 button.addEventListener('click', () => toggleCourse(button.dataset.id, button.dataset.active === 'true'));
             });
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
         } catch (error) {
             console.error('Error cargando cursos:', error);
@@ -348,6 +354,7 @@
         }
     }
 
+<<<<<<< HEAD
     async function toggleCourse(courseId, isActive) {
         const action = isActive ? 'desactivar' : 'activar';
         if (!confirm(`¿Seguro que quieres ${action} este curso?`)) return;
@@ -382,6 +389,8 @@
         }
     }
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
     document.addEventListener('DOMContentLoaded', loadCourses);
     window.loadCourses = loadCourses;
 })();

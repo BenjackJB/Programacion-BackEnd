@@ -233,6 +233,7 @@ class StudentCourse(models.Model):
     def clean(self):
         """Validación adicional antes de guardar."""
         from django.core.exceptions import ValidationError
+<<<<<<< HEAD
         # Solo validar si se intenta crear una inscripción activa con estudiante/curso inactivos
         # No validar durante soft delete (cuando activo=False)
         if self.activo:
@@ -246,6 +247,16 @@ class StudentCourse(models.Model):
         # No validar si solo se actualiza el campo activo (soft delete)
         if not kwargs.get('update_fields'):
             self.full_clean()
+=======
+        if not self.student.activo:
+            raise ValidationError('No se puede inscribir un estudiante inactivo.')
+        if not self.course.activo:
+            raise ValidationError('No se puede inscribir en un curso inactivo.')
+
+    def save(self, *args, **kwargs):
+        """Sobrescribe save para ejecutar validaciones."""
+        self.full_clean()
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
         super().save(*args, **kwargs)
 
     def soft_delete(self):

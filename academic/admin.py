@@ -18,6 +18,7 @@ from .models import Teacher, Course, Student, StudentCourse
 class SoftDeleteAdmin(admin.ModelAdmin):
     """
     Admin base que maneja borrado lógico.
+<<<<<<< HEAD
     - Muestra solo registros ACTIVOS en el listado
     - Acciones para activar/desactivar en masa
     - Filtro por estado activo/inactivo
@@ -32,6 +33,19 @@ class SoftDeleteAdmin(admin.ModelAdmin):
         if request.user.is_authenticated and request.user.is_superuser:
             return self.model.all_objects.all()
         return self.model.objects.all()
+=======
+    - Muestra campo 'activo' en listado
+    - Acciones para activar/desactivar en masa
+    - Filtro por estado activo/inactivo
+    """
+    list_filter = ('activo', 'fecha_creacion')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    actions = ['soft_delete_selected', 'restore_selected']
+
+    def get_queryset(self, request):
+        """Muestra TODOS los registros (incluye inactivos) en admin."""
+        return self.model.all_objects.all()
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
     @admin.action(description='Desactivar seleccionados (borrado lógico)')
     def soft_delete_selected(self, request, queryset):
@@ -51,6 +65,7 @@ class SoftDeleteAdmin(admin.ModelAdmin):
                 updated += 1
         self.message_user(request, f'{updated} registro(s) restaurado(s).')
 
+<<<<<<< HEAD
     @admin.action(description='Eliminar permanentemente seleccionados')
     def hard_delete_selected(self, request, queryset):
         """Borrado físico de la base de datos."""
@@ -60,6 +75,8 @@ class SoftDeleteAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'{count} registro(s) eliminado(s) permanentemente.')
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 # =============================================================================
 # TEACHER ADMIN

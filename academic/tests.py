@@ -9,7 +9,10 @@ Cubre:
 """
 
 from django.test import TestCase, Client
+<<<<<<< HEAD
 from django.contrib import admin
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
@@ -269,6 +272,7 @@ class CourseAPITest(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+<<<<<<< HEAD
     def test_activate_inactive_course(self):
         """PATCH /api/courses/{id}/ - activa un curso desactivado."""
         self.course.soft_delete()
@@ -278,6 +282,8 @@ class CourseAPITest(APITestCase):
         self.course.refresh_from_db()
         self.assertTrue(self.course.activo)
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 class StudentAPITest(APITestCase):
     """Pruebas para endpoints API de Student."""
@@ -294,6 +300,7 @@ class StudentAPITest(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+<<<<<<< HEAD
     def test_activate_inactive_student(self):
         """PATCH /api/students/{id}/ - activa un estudiante desactivado."""
         self.student.soft_delete()
@@ -303,6 +310,8 @@ class StudentAPITest(APITestCase):
         self.student.refresh_from_db()
         self.assertTrue(self.student.activo)
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 class StudentCourseAPITest(APITestCase):
     """Pruebas para endpoints API de StudentCourse (PK compuesta)."""
@@ -360,12 +369,19 @@ class HTMLViewsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'academic/login.html')
 
+<<<<<<< HEAD
     def test_courses_are_visible_without_login(self):
         """Verifica que la vista de cursos es pública para lectura."""
         response = self.client.get(reverse('courses'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'academic/courses.html')
         self.assertContains(response, 'Cursos y Docentes Asignados')
+=======
+    def test_courses_requires_login(self):
+        """Verifica que courses requiere autenticación."""
+        response = self.client.get(reverse('courses'))
+        self.assertEqual(response.status_code, 302)  # Redirect a login
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
     def test_courses_with_login(self):
         """Verifica courses con usuario autenticado."""
@@ -383,6 +399,7 @@ class HTMLViewsTest(TestCase):
         self.assertTemplateUsed(response, 'academic/students.html')
         self.assertContains(response, 'Estudiantes Inscritos')
 
+<<<<<<< HEAD
     def test_teachers_are_visible_without_login(self):
         """Verifica que la vista de docentes es pública para lectura."""
         response = self.client.get(reverse('teachers'))
@@ -398,6 +415,8 @@ class HTMLViewsTest(TestCase):
         self.assertTemplateUsed(response, 'academic/teachers.html')
         self.assertContains(response, 'Docentes')
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
     def test_home_redirects_to_courses(self):
         """Verifica que raíz redirige a courses."""
         self.client.login(username='testuser', password='password123')
@@ -405,6 +424,7 @@ class HTMLViewsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse('courses'))
 
+<<<<<<< HEAD
     def test_logout_renders_template_and_clears_session(self):
         """Verifica que el logout por GET cierra sesión y muestra la página de cierre."""
         self.client.login(username='testuser', password='password123')
@@ -413,6 +433,8 @@ class HTMLViewsTest(TestCase):
         self.assertTemplateUsed(response, 'academic/logout.html')
         self.assertFalse(response.wsgi_request.user.is_authenticated)
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 # =============================================================================
 # TESTS DE PERMISOS
@@ -443,6 +465,7 @@ class PermissionsTest(APITestCase):
         response = self.client.post('/api/teachers/', {'first_name': 'New', 'last_name': 'Teacher'})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+<<<<<<< HEAD
     def test_unauthenticated_read_only_access(self):
         """Sin autenticar: solo lectura permitida en la API."""
         response = self.client.get('/api/teachers/')
@@ -478,6 +501,13 @@ class PermissionsTest(APITestCase):
         admin_queryset = admin.site._registry[Course].get_queryset(request)
         self.assertIn(inactive_course, admin_queryset)
 
+=======
+    def test_unauthenticated_denied(self):
+        """Sin autenticar: acceso denegado."""
+        response = self.client.get('/api/teachers/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 # =============================================================================
 # TESTS DE BORRADO LÓGICO INTEGRADO

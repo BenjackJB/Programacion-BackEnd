@@ -1,0 +1,16 @@
+{% extends 'api/base.html' %}
+{% block title %}Confirmar eliminación{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h3>Eliminar Programador</h3>
+    <p class="mt-3">¿Está seguro de que desea eliminar al programador <strong>{{ programmer.fullname }}</strong>?</p>
+    <p class="text-danger"><small>Esta acción no se puede deshacer.</small></p>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+      <a href="{% url 'programmers_table' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

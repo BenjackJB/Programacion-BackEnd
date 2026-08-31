@@ -30,6 +30,7 @@
         .navbar-brand {
             font-weight: 700;
             font-size: 1.25rem;
+<<<<<<< HEAD
             letter-spacing: 0.02em;
         }
 
@@ -58,6 +59,8 @@
             border-color: rgba(255,255,255,0.45);
             transform: translateY(-1px);
             color: #fff;
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
         }
 
         .sidebar {
@@ -200,7 +203,10 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+<<<<<<< HEAD
                     {% if user.is_authenticated %}
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle me-1"></i>
@@ -215,6 +221,7 @@
                             <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
                         </ul>
                     </li>
+<<<<<<< HEAD
                     {% else %}
                     <li class="nav-item">
                         <a class="nav-login-btn" href="{% url 'login' %}">
@@ -223,6 +230,8 @@
                         </a>
                     </li>
                     {% endif %}
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                 </ul>
             </div>
         </div>
@@ -237,10 +246,13 @@
                        href="{% url 'courses' %}">
                         <i class="bi bi-journal-bookmark-fill me-2"></i>Cursos
                     </a>
+<<<<<<< HEAD
                     <a class="nav-link {% if request.resolver_match.url_name == 'teachers' %}active{% endif %}"
                        href="{% url 'teachers' %}">
                         <i class="bi bi-person-workspace me-2"></i>Docentes
                     </a>
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                     <a class="nav-link {% if request.resolver_match.url_name == 'students' %}active{% endif %}"
                        href="{% url 'students' %}">
                         <i class="bi bi-people-fill me-2"></i>Estudiantes

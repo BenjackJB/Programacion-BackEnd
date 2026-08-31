@@ -161,7 +161,10 @@
         const actions = {% if user.is_superuser %}`
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-student" data-id="${student.id}"><i class="bi bi-pencil"></i></button>
+<<<<<<< HEAD
                 <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-student" data-id="${student.id}" data-active="${student.activo}" title="${student.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${student.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                 <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-student" data-id="${student.id}"><i class="bi bi-trash"></i></button>
             </td>
         `{% else %}`<td></td>`{% endif %};
@@ -222,9 +225,12 @@
             document.querySelectorAll('.delete-student').forEach(button => {
                 button.addEventListener('click', () => deleteStudent(button.dataset.id));
             });
+<<<<<<< HEAD
             document.querySelectorAll('.toggle-student').forEach(button => {
                 button.addEventListener('click', () => toggleStudent(button.dataset.id, button.dataset.active === 'true'));
             });
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
         } catch (error) {
             console.error('Error cargando estudiantes:', error);
@@ -328,6 +334,7 @@
         }
     }
 
+<<<<<<< HEAD
     async function toggleStudent(studentId, isActive) {
         const action = isActive ? 'desactivar' : 'activar';
         if (!confirm(`¿Seguro que quieres ${action} este estudiante?`)) return;
@@ -362,6 +369,8 @@
         }
     }
 
+=======
+>>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
     document.addEventListener('DOMContentLoaded', loadStudents);
     window.loadStudents = loadStudents;
 })();

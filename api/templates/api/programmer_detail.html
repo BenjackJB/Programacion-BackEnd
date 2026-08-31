@@ -1,0 +1,32 @@
+{% extends 'api/base.html' %}
+{% block title %}{{ programmer.fullname }} - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h2>{{ programmer.fullname }} <small class="text-muted">({{ programmer.nickname }})</small></h2>
+        <p><strong>Lenguaje:</strong> {{ programmer.language }}</p>
+        <p><strong>Edad:</strong> {{ programmer.age }}</p>
+        <p><strong>Activo:</strong> {{ programmer.is_active }}</p>
+        <h5 class="mt-3">Skills</h5>
+        <ul>
+          {% for s in programmer.skills.all %}
+            <li>{{ s.name }} {% if s.level %} - {{ s.level }}{% endif %}</li>
+          {% empty %}
+            <li class="text-muted">Sin habilidades asignadas.</li>
+          {% endfor %}
+        </ul>
+        <h5 class="mt-3">Proyectos</h5>
+        <ul>
+          {% for pr in programmer.projects.all %}
+            <li><a href="{% url 'project_detail' pr.pk %}">{{ pr.name }}</a></li>
+          {% empty %}
+            <li class="text-muted">Sin proyectos asignados.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
