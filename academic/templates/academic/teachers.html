@@ -1,0 +1,245 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}{{ title }} - Gestión Académica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .teacher-row:hover { background-color: rgba(155, 89, 182, 0.05); }
+    .teacher-badge { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+    .action-btn { border: 0; border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.8rem; margin-right: 0.35rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-person-workspace me-2"></i>{{ page_header }}</h1>
+            <p class="text-muted mb-0">Gestiona los docentes registrados en el sistema.</p>
+        </div>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-light border" id="new-teacher-btn">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Docente
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul me-1"></i>Docentes Registrados</span>
+        <span class="badge bg-light text-dark" id="teachers-count">Cargando...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <div class="loading-overlay" id="teachers-loading">
+                <div class="text-center">
+                    <output class="spinner-border text-primary" aria-live="polite"><span class="visually-hidden">Cargando docentes...</span></output>
+                    <p class="mt-2 mb-0 text-muted">Cargando datos desde API...</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="teachers-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 60px;">ID</th>
+                            <th scope="col">Docente</th>
+                            <th scope="col">Cursos Asignados</th>
+                            <th scope="col" style="width: 100px;">Estado</th>
+                            {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="teachers-tbody"></tbody>
+                </table>
+            </div>
+            <div class="empty-state d-none" id="teachers-empty">
+                <i class="bi bi-person-x"></i>
+                <h5>No hay docentes registrados</h5>
+                <p class="text-muted">No se encontraron docentes en el sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser %}
+<div class="modal fade" id="teacherModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="teacher-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="teacherModalTitle">Nuevo docente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="teacher-id">
+                    <div class="mb-3">
+                        <label for="teacher-first-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="teacher-first-name" maxlength="100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="teacher-last-name" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="teacher-last-name" maxlength="100" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    const tbody = document.getElementById('teachers-tbody');
+    const loading = document.getElementById('teachers-loading');
+    const empty = document.getElementById('teachers-empty');
+    const countBadge = document.getElementById('teachers-count');
+    const table = document.getElementById('teachers-table');
+    const API_ENDPOINT = '{{ api_endpoint }}';
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        return parts.length === 2 ? parts.pop().split(';').shift() : '';
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        return new Date(value).toLocaleDateString('es-CL', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    function statusBadge(active) {
+        return active
+            ? '<span class="badge bg-success badge-status"><i class="bi bi-check-circle me-1"></i>Activo</span>'
+            : '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>';
+    }
+
+    function renderTeacherRow(teacher) {
+        const row = document.createElement('tr');
+        row.className = 'teacher-row';
+        const actions = {% if user.is_superuser %}`
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-teacher" data-id="${teacher.id}" title="Editar"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-teacher" data-id="${teacher.id}" data-active="${teacher.activo}" title="${teacher.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${teacher.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-teacher" data-id="${teacher.id}" title="Borrado lógico"><i class="bi bi-trash"></i></button>
+            </td>`{% else %}`<td></td>`{% endif %};
+        row.innerHTML = `
+            <td><strong>${teacher.id}</strong></td>
+            <td><div class="fw-medium">${teacher.full_name || ''}</div><small class="text-muted">Creado: ${formatDate(teacher.fecha_creacion)}</small></td>
+            <td><span class="badge teacher-badge text-white"><i class="bi bi-journal-bookmark me-1"></i>${teacher.courses_count ?? 0}</span></td>
+            <td class="text-center">${statusBadge(teacher.activo)}</td>
+            ${actions}`;
+        return row;
+    }
+
+    async function loadTeachers() {
+        loading.classList.remove('d-none');
+        empty.classList.add('d-none');
+        table.classList.remove('d-none');
+        try {
+            const response = await fetch(API_ENDPOINT, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const data = await response.json();
+            const teachers = data.results || data;
+            tbody.innerHTML = '';
+            countBadge.textContent = `${data.count ?? teachers.length} docente${(data.count ?? teachers.length) !== 1 ? 's' : ''}`;
+            countBadge.className = teachers.length ? 'badge bg-primary' : 'badge bg-secondary';
+            if (!teachers.length) { empty.classList.remove('d-none'); table.classList.add('d-none'); return; }
+            teachers.forEach(teacher => tbody.appendChild(renderTeacherRow(teacher)));
+            document.querySelectorAll('.edit-teacher').forEach(button => button.addEventListener('click', () => openTeacherModal(button.dataset.id)));
+            document.querySelectorAll('.delete-teacher').forEach(button => button.addEventListener('click', () => deleteTeacher(button.dataset.id)));
+            document.querySelectorAll('.toggle-teacher').forEach(button => button.addEventListener('click', () => toggleTeacher(button.dataset.id, button.dataset.active === 'true')));
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${error.message}</td></tr>`;
+            countBadge.textContent = 'Error';
+        } finally { loading.classList.add('d-none'); }
+    }
+
+    async function openTeacherModal(id = null) {
+        const modal = new bootstrap.Modal(document.getElementById('teacherModal'));
+        const form = document.getElementById('teacher-form');
+        document.getElementById('teacherModalTitle').textContent = id ? 'Editar docente' : 'Nuevo docente';
+        document.getElementById('teacher-id').value = id || '';
+        if (id) {
+            const response = await fetch(`${API_ENDPOINT}${id}/`, { credentials: 'same-origin' });
+            const teacher = await response.json();
+            document.getElementById('teacher-first-name').value = teacher.first_name || '';
+            document.getElementById('teacher-last-name').value = teacher.last_name || '';
+        } else {
+            form.reset();
+        }
+        modal.show();
+    }
+
+    async function deleteTeacher(id) {
+        if (!confirm('¿Seguro que quieres eliminar este docente con borrado lógico?')) return;
+        const response = await fetch(`${API_ENDPOINT}${id}/`, { method: 'DELETE', credentials: 'same-origin', headers: { 'X-CSRFToken': getCookie('csrftoken') } });
+        if (!response.ok) { alert('No se pudo eliminar el docente.'); return; }
+        loadTeachers();
+    }
+
+    async function toggleTeacher(id, isActive) {
+        const action = isActive ? 'desactivar' : 'activar';
+        if (!confirm(`¿Seguro que quieres ${action} este docente?`)) return;
+        try {
+            let response;
+            
+            if (isActive) {
+                // Si está activo, desactivar con PATCH
+                response = await fetch(`${API_ENDPOINT}${id}/`, {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ activo: false })
+                });
+            } else {
+                // Si está inactivo, activar con la acción restore (POST)
+                response = await fetch(`${API_ENDPOINT}${id}/restore/`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }
+                });
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `No se pudo ${action} el docente.`);
+            }
+            
+            loadTeachers();
+        } catch (error) { 
+            alert(error.message); 
+        }
+    }
+
+    document.getElementById('new-teacher-btn')?.addEventListener('click', () => openTeacherModal());
+    document.getElementById('teacher-form')?.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const id = document.getElementById('teacher-id').value;
+        const payload = {
+            first_name: document.getElementById('teacher-first-name').value.trim(),
+            last_name: document.getElementById('teacher-last-name').value.trim()
+        };
+        if (!payload.first_name || !payload.last_name) { alert('Debes completar nombre y apellido.'); return; }
+        const response = await fetch(id ? `${API_ENDPOINT}${id}/` : API_ENDPOINT, {
+            method: id ? 'PATCH' : 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) { const error = await response.json().catch(() => ({})); alert(error.detail || 'No se pudo guardar el docente.'); return; }
+        bootstrap.Modal.getInstance(document.getElementById('teacherModal')).hide();
+        loadTeachers();
+    });
+
+    document.addEventListener('DOMContentLoaded', loadTeachers);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,389 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}{{ title }} - Gestión Académica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-row:hover {
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    .teacher-badge {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+    }
+    .action-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.8rem;
+        margin-right: 0.35rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-journal-bookmark-fill me-2"></i>{{ page_header }}</h1>
+            <p class="text-muted mb-0">Listado de cursos con sus docentes asignados. Datos cargados desde API REST.</p>
+        </div>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-light border" id="new-course-btn">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Curso
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul me-1"></i>Cursos Registrados</span>
+        <span class="badge bg-light text-dark" id="courses-count">Cargando...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <div class="loading-overlay" id="courses-loading">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando cursos...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Cargando datos desde API...</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="courses-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 60px;">ID</th>
+                            <th scope="col">Curso</th>
+                            <th scope="col">Docente Asignado</th>
+                            <th scope="col" style="width: 100px;">Estado</th>
+                            {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="courses-tbody"></tbody>
+                </table>
+            </div>
+            <div class="empty-state d-none" id="courses-empty">
+                <i class="bi bi-journal-x"></i>
+                <h5>No hay cursos registrados</h5>
+                <p class="text-muted">No se encontraron cursos en el sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser %}
+<div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="course-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="courseModalTitle">Nuevo curso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="course-id">
+                    <div class="mb-3">
+                        <label for="course-name" class="form-label">Nombre del curso</label>
+                        <input type="text" class="form-control" id="course-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="course-teacher" class="form-label">Docente</label>
+                        <select class="form-select" id="course-teacher" required></select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    const tbody = document.getElementById('courses-tbody');
+    const loading = document.getElementById('courses-loading');
+    const empty = document.getElementById('courses-empty');
+    const countBadge = document.getElementById('courses-count');
+    const table = document.getElementById('courses-table');
+    const API_ENDPOINT = '{{ api_endpoint }}';
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function createStatusBadge(activo) {
+        if (activo) {
+            return '<span class="badge bg-success badge-status"><i class="bi bi-check-circle me-1"></i>Activo</span>';
+        }
+        return '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>';
+    }
+
+    function updateCount(count) {
+        countBadge.textContent = `${count} curso${count !== 1 ? 's' : ''}`;
+        countBadge.className = count > 0 ? 'badge bg-primary' : 'badge bg-secondary';
+    }
+
+    function showEmpty(show) {
+        empty.classList.toggle('d-none', !show);
+        table.classList.toggle('d-none', show);
+    }
+
+    function setLoading(show) {
+        loading.classList.toggle('d-none', !show);
+    }
+
+    function renderCourseRow(course) {
+        const tr = document.createElement('tr');
+        tr.className = 'course-row';
+        tr.dataset.id = course.id;
+
+        const teacherName = course.teacher_name || course.teacher?.full_name || 'Sin asignar';
+        const actions = {% if user.is_superuser %}`
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-course" data-id="${course.id}"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-course" data-id="${course.id}" data-active="${course.activo}" title="${course.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${course.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-course" data-id="${course.id}"><i class="bi bi-trash"></i></button>
+            </td>
+        `{% else %}`<td></td>`{% endif %};
+
+        tr.innerHTML = `
+            <td><strong>${course.id}</strong></td>
+            <td>
+                <div class="fw-medium">${course.name}</div>
+                <small class="text-muted">Creado: ${formatDate(course.fecha_creacion)}</small>
+            </td>
+            <td><span class="badge teacher-badge text-white">${teacherName}</span></td>
+            <td class="text-center">${createStatusBadge(course.activo)}</td>
+            ${actions}
+        `;
+        return tr;
+    }
+
+    async function loadCourses() {
+        setLoading(true);
+        showEmpty(false);
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '{% url "login" %}?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const courses = data.results || data;
+            tbody.innerHTML = '';
+
+            if (courses.length === 0) {
+                showEmpty(true);
+                updateCount(0);
+                return;
+            }
+
+            courses.forEach(course => tbody.appendChild(renderCourseRow(course)));
+            updateCount(data.count || courses.length);
+
+            document.querySelectorAll('.edit-course').forEach(button => {
+                button.addEventListener('click', () => openCourseModal(button.dataset.id));
+            });
+            document.querySelectorAll('.delete-course').forEach(button => {
+                button.addEventListener('click', () => deleteCourse(button.dataset.id));
+            });
+            document.querySelectorAll('.toggle-course').forEach(button => {
+                button.addEventListener('click', () => toggleCourse(button.dataset.id, button.dataset.active === 'true'));
+            });
+
+        } catch (error) {
+            console.error('Error cargando cursos:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger py-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar datos: ${error.message}
+                    </td>
+                </tr>
+            `;
+            updateCount(0);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function loadTeachersForSelect(selectedId = null) {
+        const select = document.getElementById('course-teacher');
+        select.innerHTML = '<option value="">Selecciona un docente</option>';
+
+        try {
+            const response = await fetch('/api/teachers/', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            const teachers = data.results || data;
+
+            teachers.forEach(teacher => {
+                const option = document.createElement('option');
+                option.value = teacher.id;
+                option.textContent = teacher.full_name || `${teacher.first_name} ${teacher.last_name}`;
+                if (String(selectedId) === String(teacher.id)) option.selected = true;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error cargando docentes:', error);
+        }
+    }
+
+    async function openCourseModal(courseId = null) {
+        const modalElement = document.getElementById('courseModal');
+        const modal = new bootstrap.Modal(modalElement);
+        const form = document.getElementById('course-form');
+        const title = document.getElementById('courseModalTitle');
+        const idField = document.getElementById('course-id');
+        const nameField = document.getElementById('course-name');
+
+        await loadTeachersForSelect();
+
+        if (courseId) {
+            title.textContent = 'Editar curso';
+            const response = await fetch(`${API_ENDPOINT}${courseId}/`, { credentials: 'same-origin' });
+            const course = await response.json();
+            idField.value = course.id;
+            nameField.value = course.name || '';
+            await loadTeachersForSelect(course.teacher?.id || course.teacher_id);
+        } else {
+            title.textContent = 'Nuevo curso';
+            idField.value = '';
+            form.reset();
+            await loadTeachersForSelect();
+        }
+
+        modal.show();
+    }
+
+    document.getElementById('new-course-btn')?.addEventListener('click', () => openCourseModal());
+
+    document.getElementById('course-form')?.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const courseId = document.getElementById('course-id').value;
+        const payload = {
+            name: document.getElementById('course-name').value.trim(),
+            teacher_id: document.getElementById('course-teacher').value
+        };
+
+        if (!payload.name || !payload.teacher_id) {
+            alert('Debes completar el nombre del curso y seleccionar un docente.');
+            return;
+        }
+
+        const url = courseId ? `${API_ENDPOINT}${courseId}/` : API_ENDPOINT;
+        const method = courseId ? 'PATCH' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || err.non_field_errors?.[0] || 'No se pudo guardar el curso.');
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('courseModal')).hide();
+            loadCourses();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    async function deleteCourse(courseId) {
+        if (!confirm('¿Seguro que quieres eliminar este curso con borrado lógico?')) return;
+
+        try {
+            const response = await fetch(`${API_ENDPOINT}${courseId}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo eliminar');
+            }
+
+            loadCourses();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    async function toggleCourse(courseId, isActive) {
+        const action = isActive ? 'desactivar' : 'activar';
+        if (!confirm(`¿Seguro que quieres ${action} este curso?`)) return;
+        try {
+            let response;
+            
+            if (isActive) {
+                // Si está activo, desactivar con PATCH
+                response = await fetch(`${API_ENDPOINT}${courseId}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ activo: false })
+                });
+            } else {
+                // Si está inactivo, activar con la acción restore (POST)
+                response = await fetch(`${API_ENDPOINT}${courseId}/restore/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    credentials: 'same-origin'
+                });
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `No se pudo ${action} el curso.`);
+            }
+            
+            loadCourses();
+        } catch (error) { 
+            alert(error.message); 
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCourses);
+    window.loadCourses = loadCourses;
+})();
+</script>
+{% endblock %}
