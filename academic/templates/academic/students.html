@@ -1,0 +1,331 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}{{ title }} - Gestión Académica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-row:hover {
+        background-color: rgba(46, 204, 113, 0.05);
+    }
+    .student-badge {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+    }
+    .action-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.8rem;
+        margin-right: 0.35rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-people-fill me-2"></i>{{ page_header }}</h1>
+            <p class="text-muted mb-0">Listado de estudiantes. Datos cargados desde API REST.</p>
+        </div>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-light border" id="new-student-btn">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Estudiante
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul me-1"></i>Estudiantes Registrados</span>
+        <span class="badge bg-light text-dark" id="students-count">Cargando...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <div class="loading-overlay" id="students-loading">
+                <div class="text-center">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Cargando estudiantes...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Cargando datos desde API...</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="students-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 60px;">ID</th>
+                            <th scope="col">Estudiante</th>
+                            <th scope="col">Cursos Inscritos</th>
+                            <th scope="col" style="width: 180px;">Estado</th>
+                            {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="students-tbody"></tbody>
+                </table>
+            </div>
+            <div class="empty-state d-none" id="students-empty">
+                <i class="bi bi-people"></i>
+                <h5>No hay estudiantes registrados</h5>
+                <p class="text-muted">No se encontraron estudiantes en el sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser %}
+<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="student-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentModalTitle">Nuevo estudiante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="student-id">
+                    <div class="mb-3">
+                        <label for="student-first-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="student-first-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="student-last-name" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="student-last-name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    const tbody = document.getElementById('students-tbody');
+    const loading = document.getElementById('students-loading');
+    const empty = document.getElementById('students-empty');
+    const countBadge = document.getElementById('students-count');
+    const table = document.getElementById('students-table');
+    const API_ENDPOINT = '{{ api_endpoint }}';
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('es-CL', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    function createStatusBadge(activo) {
+        if (activo) {
+            return '<span class="badge bg-success badge-status"><i class="bi bi-check-circle me-1"></i>Activo</span>';
+        }
+        return '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>';
+    }
+
+    function updateCount(count) {
+        countBadge.textContent = `${count} estudiante${count !== 1 ? 's' : ''}`;
+        countBadge.className = count > 0 ? 'badge bg-success' : 'badge bg-secondary';
+    }
+
+    function showEmpty(show) {
+        empty.classList.toggle('d-none', !show);
+        table.classList.toggle('d-none', show);
+    }
+
+    function setLoading(show) {
+        loading.classList.toggle('d-none', !show);
+    }
+
+    function renderStudentRow(student) {
+        const tr = document.createElement('tr');
+        tr.className = 'student-row';
+        tr.dataset.id = student.id;
+
+        const coursesCount = student.courses_count ?? 0;
+        const actions = {% if user.is_superuser %}`
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-student" data-id="${student.id}"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-student" data-id="${student.id}"><i class="bi bi-trash"></i></button>
+            </td>
+        `{% else %}`<td></td>`{% endif %};
+
+        tr.innerHTML = `
+            <td><strong>${student.id}</strong></td>
+            <td>
+                <div class="fw-medium">${student.full_name || ''}</div>
+                <small class="text-muted">Creado: ${formatDate(student.fecha_creacion)}</small>
+            </td>
+            <td class="text-center">
+                <span class="badge student-badge text-white fs-6">
+                    <i class="bi bi-journal-bookmark me-1"></i>${coursesCount}
+                </span>
+                <div class="text-muted small mt-1">${coursesCount} curso${coursesCount !== 1 ? 's' : ''}</div>
+            </td>
+            <td class="text-center">${createStatusBadge(student.activo)}</td>
+            ${actions}
+        `;
+        return tr;
+    }
+
+    async function loadStudents() {
+        setLoading(true);
+        showEmpty(false);
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '{% url "login" %}?next=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const students = data.results || data;
+            tbody.innerHTML = '';
+
+            if (students.length === 0) {
+                showEmpty(true);
+                updateCount(0);
+                return;
+            }
+
+            students.forEach(student => tbody.appendChild(renderStudentRow(student)));
+            updateCount(data.count || students.length);
+
+            document.querySelectorAll('.edit-student').forEach(button => {
+                button.addEventListener('click', () => openStudentModal(button.dataset.id));
+            });
+            document.querySelectorAll('.delete-student').forEach(button => {
+                button.addEventListener('click', () => deleteStudent(button.dataset.id));
+            });
+
+        } catch (error) {
+            console.error('Error cargando estudiantes:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger py-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar datos: ${error.message}
+                    </td>
+                </tr>
+            `;
+            updateCount(0);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function openStudentModal(studentId = null) {
+        const modalElement = document.getElementById('studentModal');
+        const modal = new bootstrap.Modal(modalElement);
+        const form = document.getElementById('student-form');
+        const title = document.getElementById('studentModalTitle');
+        const idField = document.getElementById('student-id');
+        const firstName = document.getElementById('student-first-name');
+        const lastName = document.getElementById('student-last-name');
+
+        if (studentId) {
+            title.textContent = 'Editar estudiante';
+            const response = await fetch(`${API_ENDPOINT}${studentId}/`, { credentials: 'same-origin' });
+            const student = await response.json();
+            idField.value = student.id;
+            firstName.value = student.first_name || '';
+            lastName.value = student.last_name || '';
+        } else {
+            title.textContent = 'Nuevo estudiante';
+            idField.value = '';
+            form.reset();
+        }
+
+        modal.show();
+    }
+
+    document.getElementById('new-student-btn')?.addEventListener('click', () => openStudentModal());
+
+    document.getElementById('student-form')?.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const studentId = document.getElementById('student-id').value;
+        const payload = {
+            first_name: document.getElementById('student-first-name').value.trim(),
+            last_name: document.getElementById('student-last-name').value.trim()
+        };
+
+        if (!payload.first_name || !payload.last_name) {
+            alert('Debes completar nombre y apellido.');
+            return;
+        }
+
+        const url = studentId ? `${API_ENDPOINT}${studentId}/` : API_ENDPOINT;
+        const method = studentId ? 'PATCH' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || err.non_field_errors?.[0] || 'No se pudo guardar el estudiante.');
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
+            loadStudents();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    async function deleteStudent(studentId) {
+        if (!confirm('¿Seguro que quieres eliminar este estudiante con borrado lógico?')) return;
+
+        try {
+            const response = await fetch(`${API_ENDPOINT}${studentId}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo eliminar');
+            }
+
+            loadStudents();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStudents);
+    window.loadStudents = loadStudents;
+})();
+</script>
+{% endblock %}
