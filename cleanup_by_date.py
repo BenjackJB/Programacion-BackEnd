@@ -11,12 +11,12 @@ from academic.models import StudentCourse, Student, Teacher, Course
 from django.utils import timezone as django_timezone
 
 print("="*60)
-print("ELIMINANDO REGISTROS POSTERIORES A 31-08-2026 23:00")
+print("ELIMINANDO REGISTROS POSTERIORES A 31-12-2026 23:00")
 print("="*60)
 
-# Fecha límite: 31-08-2026 a las 23:00
+# Fecha límite: 31-12-2026 a las 23:00
 cutoff_date = django_timezone.make_aware(
-    datetime(2026, 8, 31, 23, 0, 0)
+    datetime(2026, 12, 31, 23, 0, 0)
 )
 print(f"\nFecha límite: {cutoff_date}")
 print(f"Se eliminarán registros con fecha_creacion > {cutoff_date}\n")

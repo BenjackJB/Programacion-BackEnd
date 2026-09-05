@@ -46,10 +46,18 @@ class CourseSerializer(serializers.ModelSerializer):
         help_text='ID del docente asignado'
     )
     students_count = serializers.IntegerField(read_only=True)
+    students = serializers.SerializerMethodField()
+
+    def get_students(self, obj):
+        """Retorna los estudiantes activos inscritos en el curso."""
+        return StudentListSerializer(
+            [enrollment.student for enrollment in obj.student_courses.all()],
+            many=True
+        ).data
 
     class Meta:
         model = Course
-        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'activo', 'fecha_creacion']
+        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'students', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'students_count']
 
 
@@ -142,7 +150,6 @@ class StudentCourseSerializer(serializers.ModelSerializer):
 class CourseListSerializer(serializers.ModelSerializer):
     """
     Serializer optimizado para listado de cursos (vista courses.html).
-<<<<<<< HEAD
     Incluye solo campos necesarios: id, name, teacher, activo, estudiantes, fechas.
     """
     teacher = TeacherSerializer(read_only=True)
@@ -153,27 +160,24 @@ class CourseListSerializer(serializers.ModelSerializer):
         help_text='ID del docente asignado'
     )
     students_count = serializers.IntegerField(read_only=True)
+    students = serializers.SerializerMethodField()
+
+    def get_students(self, obj):
+        """Retorna los estudiantes activos inscritos en el curso."""
+        return StudentListSerializer(
+            [enrollment.student for enrollment in obj.student_courses.all()],
+            many=True
+        ).data
 
     class Meta:
         model = Course
-        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'activo', 'fecha_creacion']
+        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'students', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'students_count']
-=======
-    Incluye solo campos necesarios: id, name, teacher (nombre).
-    """
-    teacher_name = serializers.CharField(source='teacher.full_name', read_only=True)
-
-    class Meta:
-        model = Course
-        fields = ['id', 'name', 'teacher_name']
-        read_only_fields = fields
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
 
 class StudentListSerializer(serializers.ModelSerializer):
     """
     Serializer optimizado para listado de estudiantes (vista students.html).
-<<<<<<< HEAD
     Incluye solo campos necesarios: id, full_name, cursos, activo, fechas.
     """
     full_name = serializers.ReadOnlyField()
@@ -183,13 +187,3 @@ class StudentListSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id', 'first_name', 'last_name', 'full_name', 'courses_count', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
-=======
-    Incluye solo campos necesarios: id, full_name.
-    """
-    full_name = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Student
-        fields = ['id', 'full_name']
-        read_only_fields = fields
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0

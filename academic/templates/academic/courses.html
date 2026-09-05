@@ -17,6 +17,17 @@
         font-size: 0.8rem;
         margin-right: 0.35rem;
     }
+    .student-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.65rem 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .student-option:last-child {
+        border-bottom: 0;
+    }
 </style>
 {% endblock %}
 
@@ -57,6 +68,7 @@
                             <th scope="col" style="width: 60px;">ID</th>
                             <th scope="col">Curso</th>
                             <th scope="col">Docente Asignado</th>
+                            <th scope="col">Alumnos Inscritos</th>
                             <th scope="col" style="width: 100px;">Estado</th>
                             {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
                         </tr>
@@ -74,6 +86,28 @@
 </div>
 
 {% if user.is_superuser %}
+<div class="modal fade" id="studentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="students-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentsModalTitle">Estudiantes del curso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="students-course-id">
+                    <p class="form-label mb-2">Marca los estudiantes que deben permanecer inscritos</p>
+                    <div class="border rounded" id="course-students" aria-live="polite"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -156,13 +190,15 @@
         tr.dataset.id = course.id;
 
         const teacherName = course.teacher_name || course.teacher?.full_name || 'Sin asignar';
+        const students = course.students || [];
+        const studentsMarkup = students.length
+            ? students.map(student => `<span class="badge bg-success-subtle text-success-emphasis me-1 mb-1">${student.full_name}</span>`).join('')
+            : '<span class="text-muted">Sin alumnos</span>';
         const actions = {% if user.is_superuser %}`
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-course" data-id="${course.id}"><i class="bi bi-pencil"></i></button>
-<<<<<<< HEAD
+                <button type="button" class="btn btn-sm btn-outline-info action-btn manage-students" data-id="${course.id}" data-name="${course.name}" title="Agregar estudiantes"><i class="bi bi-person-plus"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-course" data-id="${course.id}" data-active="${course.activo}" title="${course.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${course.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
-=======
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
                 <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-course" data-id="${course.id}"><i class="bi bi-trash"></i></button>
             </td>
         `{% else %}`<td></td>`{% endif %};
@@ -174,6 +210,10 @@
                 <small class="text-muted">Creado: ${formatDate(course.fecha_creacion)}</small>
             </td>
             <td><span class="badge teacher-badge text-white">${teacherName}</span></td>
+            <td>
+                <div class="small mb-1">${course.students_count || 0} alumno${(course.students_count || 0) !== 1 ? 's' : ''}</div>
+                <div>${studentsMarkup}</div>
+            </td>
             <td class="text-center">${createStatusBadge(course.activo)}</td>
             ${actions}
         `;
@@ -215,21 +255,21 @@
             document.querySelectorAll('.edit-course').forEach(button => {
                 button.addEventListener('click', () => openCourseModal(button.dataset.id));
             });
+            document.querySelectorAll('.manage-students').forEach(button => {
+                button.addEventListener('click', () => openStudentsModal(button.dataset.id, button.dataset.name));
+            });
             document.querySelectorAll('.delete-course').forEach(button => {
                 button.addEventListener('click', () => deleteCourse(button.dataset.id));
             });
-<<<<<<< HEAD
             document.querySelectorAll('.toggle-course').forEach(button => {
                 button.addEventListener('click', () => toggleCourse(button.dataset.id, button.dataset.active === 'true'));
             });
-=======
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
 
         } catch (error) {
             console.error('Error cargando cursos:', error);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center text-danger py-4">
+                        <td colspan="6" class="text-center text-danger py-4">
                         <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar datos: ${error.message}
                     </td>
                 </tr>
@@ -334,6 +374,109 @@
         }
     });
 
+    async function openStudentsModal(courseId, courseName) {
+        const modal = new bootstrap.Modal(document.getElementById('studentsModal'));
+        const studentsList = document.getElementById('course-students');
+        document.getElementById('students-course-id').value = courseId;
+        document.getElementById('studentsModalTitle').textContent = `Estudiantes de ${courseName}`;
+        studentsList.innerHTML = '<div class="p-3 text-muted">Cargando estudiantes...</div>';
+
+        try {
+            const [studentsResponse, enrollmentsResponse] = await Promise.all([
+                fetch('/api/students/', { credentials: 'same-origin' }),
+                fetch(`/api/enrollments/?course_id=${courseId}`, { credentials: 'same-origin' })
+            ]);
+            if (!studentsResponse.ok || !enrollmentsResponse.ok) throw new Error('No se pudieron cargar los estudiantes.');
+
+            const studentsData = await studentsResponse.json();
+            const enrollmentsData = await enrollmentsResponse.json();
+            const students = studentsData.results || studentsData;
+            const enrollments = enrollmentsData.results || enrollmentsData;
+            const enrollmentByStudent = new Map(
+                enrollments.map(enrollment => [String(enrollment.student.id), enrollment])
+            );
+
+            studentsList.innerHTML = '';
+            students.filter(student => student.activo).forEach(student => {
+                const studentId = String(student.id);
+                const isEnrolled = enrollmentByStudent.get(studentId)?.activo === true;
+                const option = document.createElement('label');
+                option.className = 'student-option';
+                option.innerHTML = `
+                    <span class="d-flex align-items-center gap-2">
+                        <input class="form-check-input student-checkbox" type="checkbox" value="${studentId}" ${isEnrolled ? 'checked' : ''}>
+                        <span>${student.full_name || `${student.first_name} ${student.last_name}`}</span>
+                    </span>
+                    <span class="badge ${isEnrolled ? 'bg-success' : 'bg-secondary'} student-status">${isEnrolled ? 'Inscrito' : 'No inscrito'}</span>
+                `;
+                const checkbox = option.querySelector('.student-checkbox');
+                checkbox.addEventListener('change', () => {
+                    const status = option.querySelector('.student-status');
+                    status.textContent = checkbox.checked ? 'Inscrito' : 'No inscrito';
+                    status.className = `badge ${checkbox.checked ? 'bg-success' : 'bg-secondary'} student-status`;
+                });
+                studentsList.appendChild(option);
+            });
+            if (!studentsList.children.length) studentsList.innerHTML = '<div class="p-3 text-muted">No hay estudiantes activos</div>';
+            studentsList.dataset.enrollments = JSON.stringify(Object.fromEntries(enrollmentByStudent));
+            modal.show();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    document.getElementById('students-form')?.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const courseId = document.getElementById('students-course-id').value;
+        const studentsList = document.getElementById('course-students');
+        const enrollments = JSON.parse(studentsList.dataset.enrollments || '{}');
+        const checkboxes = Array.from(studentsList.querySelectorAll('.student-checkbox'));
+        const selectedIds = new Set(checkboxes.filter(checkbox => checkbox.checked).map(checkbox => checkbox.value));
+        const removedStudents = Object.entries(enrollments)
+            .filter(([studentId, enrollment]) => enrollment.activo && !selectedIds.has(studentId));
+
+        if (removedStudents.length && !confirm(`Se quitará${removedStudents.length === 1 ? '' : 'n'} ${removedStudents.length} estudiante${removedStudents.length === 1 ? '' : 's'} del curso. ¿Continuar?`)) {
+            return;
+        }
+
+        try {
+            for (const checkbox of checkboxes) {
+                if (!checkbox.checked) continue;
+                const existing = enrollments[checkbox.value];
+                if (existing?.activo) continue;
+
+                const url = existing ? `/api/enrollments/${checkbox.value}/${courseId}/` : '/api/enrollments/';
+                const response = await fetch(url, {
+                    method: existing ? 'PATCH' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(existing ? { activo: true } : { student_id: checkbox.value, course_id: courseId })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || errorData.non_field_errors?.[0] || 'No se pudo agregar un estudiante.');
+                }
+            }
+
+            for (const [studentId] of removedStudents) {
+                const response = await fetch(`/api/enrollments/${studentId}/${courseId}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) throw new Error('No se pudo quitar un estudiante del curso.');
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('studentsModal')).hide();
+            loadCourses();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
     async function deleteCourse(courseId) {
         if (!confirm('¿Seguro que quieres eliminar este curso con borrado lógico?')) return;
 
@@ -354,7 +497,6 @@
         }
     }
 
-<<<<<<< HEAD
     async function toggleCourse(courseId, isActive) {
         const action = isActive ? 'desactivar' : 'activar';
         if (!confirm(`¿Seguro que quieres ${action} este curso?`)) return;
@@ -389,8 +531,6 @@
         }
     }
 
-=======
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
     document.addEventListener('DOMContentLoaded', loadCourses);
     window.loadCourses = loadCourses;
 })();

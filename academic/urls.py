@@ -9,6 +9,7 @@ Incluye:
 """
 
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from . import views
 
@@ -34,10 +35,7 @@ urlpatterns = [
     # Vistas principales (templates HTML)
     path('', views.HomeView.as_view(), name='home'),
     path('courses/', views.CoursesView.as_view(), name='courses'),
-<<<<<<< HEAD
     path('teachers/', views.TeachersView.as_view(), name='teachers'),
-=======
->>>>>>> 3fdb7aba9b1c11e353b7619528ed4d660791b4a0
     path('students/', views.StudentsView.as_view(), name='students'),
 
     # API REST (DRF) - prefijo /api/
@@ -55,4 +53,6 @@ urlpatterns = [
         }),
         name='enrollment-detail-composite'
     ),
+
+    path('<path:unknown_path>', RedirectView.as_view(url='/courses/', permanent=False)),
 ]
