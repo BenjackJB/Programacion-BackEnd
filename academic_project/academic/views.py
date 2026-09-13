@@ -183,15 +183,11 @@ class TeacherViewSet(viewsets.ModelViewSet):
     ordering = ['last_name', 'first_name']
 
     def get_queryset(self):
-        """Listado solo muestra activos. Restore accede a todos."""
-        qs = Teacher.objects.annotate(
-            courses_count=Count('courses', filter=Q(courses__activo=True))
-        )
-        if getattr(self, 'action', None) == 'restore':
-            return Teacher.all_objects.annotate(
-                courses_count=Count('courses', filter=Q(courses__activo=True))
-            )
-        return qs
+        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
+        annotate = dict(courses_count=Count('courses', filter=Q(courses__activo=True)))
+        if self.request.user.is_superuser:
+            return Teacher.all_objects.annotate(**annotate)
+        return Teacher.objects.annotate(**annotate)
 
     def perform_create(self, serializer):
         """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
@@ -245,7 +241,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return CourseSerializer
 
     def get_queryset(self):
-        """Listado solo muestra activos. Restore accede a todos."""
+        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
         student_courses = Prefetch(
             'student_courses',
             queryset=StudentCourse.objects.select_related('student').filter(student__activo=True)
@@ -254,10 +250,10 @@ class CourseViewSet(viewsets.ModelViewSet):
             'student_courses',
             filter=Q(student_courses__activo=True, student_courses__student__activo=True)
         )
-        base_qs = Course.objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
-        if getattr(self, 'action', None) == 'restore':
-            return Course.all_objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
-        return base_qs
+        qs = Course.objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
+        if self.request.user.is_superuser:
+            qs = Course.all_objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
+        return qs
 
     def get_object(self):
         """Permite recuperar un curso inactivo para PATCH/PUT/DELETE y restauración."""
@@ -303,12 +299,12 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def get_queryset(self):
-        """Listado solo muestra activos. Restore accede a todos."""
+        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
         courses_count_annotation = Count(
             'student_courses',
             filter=Q(student_courses__activo=True, student_courses__course__activo=True)
         )
-        if getattr(self, 'action', None) == 'restore':
+        if self.request.user.is_superuser:
             return Student.all_objects.annotate(courses_count=courses_count_annotation)
         return Student.objects.annotate(courses_count=courses_count_annotation)
 
