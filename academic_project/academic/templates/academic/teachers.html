@@ -28,11 +28,19 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <div class="row g-2 search-ordering-row align-items-center">
-            <div class="col-12 col-md-6 search-input-wrapper">
+            <div class="col-12 col-md-4 search-input-wrapper">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <input type="search" class="form-control form-control-sm" id="teachers-search" placeholder="Buscar docentes..." aria-label="Buscar docentes" autocomplete="off">
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" id="teachers-sexo-filter" aria-label="Filtrar por sexo">
+                    <option value="">Todos los sexos</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="O">Otro</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
                 <select class="form-select form-select-sm ordering-select" id="teachers-ordering" aria-label="Ordenar docentes">
                     <option value="">Ordenar por...</option>
                     <option value="last_name">Apellido (A-Z)</option>
@@ -70,6 +78,7 @@
                         <tr>
                             <th scope="col" style="width: 60px;" aria-sort="none">ID</th>
                             <th scope="col" data-order="last_name" aria-sort="none">Docente <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="sexo" aria-sort="none">Sexo <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" data-order="courses_count" aria-sort="none">Cursos Asignados <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" style="width: 100px;" aria-sort="none">Estado</th>
                             {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
@@ -110,6 +119,14 @@
                         <input type="text" class="form-control" id="teacher-last-name" name="last_name" maxlength="100" required aria-required="true" aria-describedby="teacher-last-name-help">
                         <div id="teacher-last-name-help" class="form-text">Apellido del docente</div>
                         <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="teacher-sexo" class="form-label">Sexo <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select class="form-select" id="teacher-sexo" name="sexo" required aria-required="true">
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                            <option value="O">Otro</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">

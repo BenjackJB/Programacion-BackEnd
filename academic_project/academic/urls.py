@@ -9,7 +9,6 @@ Incluye:
 """
 
 from django.urls import path, include
-from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from . import views
 
@@ -54,5 +53,4 @@ urlpatterns = [
         name='enrollment-detail-composite'
     ),
 
-    path('<path:unknown_path>', RedirectView.as_view(url='/courses/', permanent=False)),
 ]

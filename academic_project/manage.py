@@ -6,7 +6,7 @@ import sys
 
 def main():
     """Configura el entorno y ejecuta comandos de gestión de Django."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'drf.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'academic_project.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

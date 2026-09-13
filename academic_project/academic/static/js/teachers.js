@@ -39,6 +39,16 @@
                     `
                 },
                 {
+                    key: 'sexo',
+                    class: 'text-center',
+                    format: (v) => {
+                        const labels = { 'M': 'Masculino', 'F': 'Femenino', 'O': 'Otro' };
+                        const icons = { 'M': 'bi-gender-male', 'F': 'bi-gender-female', 'O': 'bi-gender-ambiguous' };
+                        const colors = { 'M': 'bg-primary', 'F': 'bg-danger', 'O': 'bg-secondary' };
+                        return `<span class="badge ${colors[v] || 'bg-secondary'}"><i class="bi ${icons[v] || 'bi-person'} me-1"></i>${labels[v] || v}</span>`;
+                    }
+                },
+                {
                     key: 'courses_count',
                     class: 'text-center',
                     format: v => `<span class="badge bg-primary teacher-badge text-white"><i class="bi bi-journal-bookmark me-1"></i>${v ?? 0}</span>`
@@ -68,16 +78,19 @@
     function initSearchAndOrderingUI() {
         const searchInput = document.getElementById('teachers-search');
         const orderingSelect = document.getElementById('teachers-ordering');
+        const sexoFilter = document.getElementById('teachers-sexo-filter');
 
         if (searchInput) {
             const debouncedSearch = AcademicCore.debounce((term) => teachersTable.setSearch(term), 300);
             searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
         }
-
         if (orderingSelect) {
             orderingSelect.addEventListener('change', (e) => {
                 if (e.target.value) teachersTable.setOrdering(e.target.value);
             });
+        }
+        if (sexoFilter) {
+            sexoFilter.addEventListener('change', (e) => teachersTable.setFilter('sexo', e.target.value));
         }
     }
 
@@ -89,6 +102,7 @@
             fields: [
                 { name: 'first_name', id: 'teacher-first-name', type: 'text', required: true },
                 { name: 'last_name', id: 'teacher-last-name', type: 'text', required: true },
+                { name: 'sexo', id: 'teacher-sexo', type: 'select', required: true },
             ],
             onSuccess: () => teachersTable.load(),
             validate: (data) => {

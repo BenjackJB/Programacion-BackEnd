@@ -18,17 +18,16 @@ from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse
 from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import NotFound
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Teacher, Course, Student, StudentCourse
 from django.db.models import Prefetch, Count, Q
@@ -36,10 +35,7 @@ from .serializers import (
     TeacherSerializer, CourseSerializer, StudentSerializer, StudentCourseSerializer,
     CourseListSerializer, StudentListSerializer
 )
-from .permissions import (
-    IsSuperUserOrReadOnly, AcademicPermission,
-    CanManageTeachers, CanManageCourses, CanManageStudents, CanManageEnrollments
-)
+from .permissions import IsSuperUserOrReadOnly
 
 
 # =============================================================================
@@ -169,15 +165,11 @@ class HomeView(BaseTemplateView):
 # =============================================================================
 
 class TeacherViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para Docentes.
-    - Usuarios sin autenticar: lectura permitida.
-    - Superusuario: puede escribir y gestionar.
-    """
     queryset = Teacher.all_objects.all()
     serializer_class = TeacherSerializer
     permission_classes = [IsSuperUserOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activo', 'sexo']
     search_fields = ['first_name', 'last_name']
     ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
     ordering = ['last_name', 'first_name']
@@ -209,7 +201,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[CanManageTeachers])
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
     def restore(self, request, pk=None):
         """Restaura un docente desactivado."""
         teacher = self.get_object()
@@ -219,13 +211,10 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
 
 class CourseViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para Cursos.
-    Lectura pública; escritura solo para superusuarios.
-    """
     queryset = Course.all_objects.select_related('teacher').all()
     permission_classes = [IsSuperUserOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activo', 'jornada', 'teacher']
     search_fields = ['name', 'teacher__first_name', 'teacher__last_name']
     ordering_fields = ['name', 'fecha_creacion', 'students_count', 'teacher__last_name', 'teacher__first_name']
     ordering = ['name']
@@ -271,7 +260,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[CanManageCourses])
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
     def restore(self, request, pk=None):
         """Restaura un curso desactivado."""
         course = self.get_object()
@@ -281,15 +270,11 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 
 class StudentViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para Estudiantes.
-    - Usuarios sin autenticar: lectura permitida.
-    - Superusuario: puede escribir y gestionar.
-    """
     queryset = Student.all_objects.all()
     serializer_class = StudentSerializer
     permission_classes = [IsSuperUserOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activo', 'sexo', 'jornada']
     search_fields = ['first_name', 'last_name']
     ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
     ordering = ['last_name', 'first_name']
@@ -330,7 +315,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[CanManageStudents])
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
     def restore(self, request, pk=None):
         """Restaura un estudiante desactivado."""
         student = self.get_object()
@@ -340,15 +325,11 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 
 class StudentCourseViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para Inscripciones.
-    - Usuarios sin autenticar: lectura permitida.
-    - Superusuario: puede escribir y gestionar.
-    """
     queryset = StudentCourse.all_objects.select_related('student', 'course').all()
     serializer_class = StudentCourseSerializer
     permission_classes = [IsSuperUserOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activo', 'student', 'course']
     search_fields = ['student__first_name', 'student__last_name', 'course__name']
     ordering_fields = ['fecha_creacion']
     ordering = ['-fecha_creacion']
@@ -399,7 +380,7 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[CanManageEnrollments])
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
     def restore(self, request, student_id=None, course_id=None):
         """Restaura una inscripción desactivada."""
         enrollment = self.get_object()

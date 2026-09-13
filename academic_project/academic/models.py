@@ -36,12 +36,6 @@ class ActiveManager(Manager):
         return super().get_queryset()
 
 
-class InactiveManager(Manager):
-    """Manager para consultar solo registros inactivos."""
-    def get_queryset(self):
-        return super().get_queryset().filter(activo=False)
-
-
 class StudentCourseActiveManager(ActiveManager):
     """
     Manager para StudentCourse que también filtra por student.activo y course.activo.
@@ -70,7 +64,6 @@ class BaseModel(models.Model):
     # Managers: objects = solo activos, all_objects = todos (incluye inactivos)
     objects = ActiveManager()
     all_objects = Manager()  # Manager por defecto de Django (sin filtros)
-    inactive_objects = InactiveManager()
 
     class Meta:
         abstract = True
@@ -109,13 +102,15 @@ class BaseModel(models.Model):
 # =============================================================================
 
 class Teacher(BaseModel):
-    """
-    Docente de la institución.
-    Campos: id, first_name, last_name, activo, fechas (heredados de BaseModel).
-    Tabla: teacher
-    """
+    SEXO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+        ('O', 'Otro'),
+    ]
+
     first_name = models.CharField(max_length=100, verbose_name='Nombre')
     last_name = models.CharField(max_length=100, verbose_name='Apellido')
+    sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, default='M', verbose_name='Sexo')
 
     class Meta:
         db_table = 'teacher'
@@ -128,7 +123,6 @@ class Teacher(BaseModel):
 
     @property
     def full_name(self):
-        """Retorna nombre completo del docente."""
         return f"{self.first_name} {self.last_name}"
 
 
@@ -137,19 +131,19 @@ class Teacher(BaseModel):
 # =============================================================================
 
 class Course(BaseModel):
-    """
-    Asignatura/Curso impartido por un docente.
-    Campos: id, name, teacher (FK), activo, fechas.
-    Tabla: course
-    Relación: Un docente dicta muchos cursos (1:N)
-    """
+    JORNADA_CHOICES = [
+        ('D', 'Diurna'),
+        ('V', 'Vespertina'),
+    ]
+
     name = models.CharField(max_length=100, verbose_name='Nombre del curso')
     teacher = models.ForeignKey(
         Teacher,
-        on_delete=models.PROTECT,  # PROTECT evita borrar teacher si tiene cursos
+        on_delete=models.PROTECT,
         related_name='courses',
         verbose_name='Docente'
     )
+    jornada = models.CharField(max_length=1, choices=JORNADA_CHOICES, default='D', verbose_name='Jornada')
 
     class Meta:
         db_table = 'course'
@@ -158,7 +152,7 @@ class Course(BaseModel):
         ordering = ['name']
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_jornada_display()})"
 
 
 # =============================================================================
@@ -166,13 +160,20 @@ class Course(BaseModel):
 # =============================================================================
 
 class Student(BaseModel):
-    """
-    Estudiante de la institución.
-    Campos: id, first_name, last_name, activo, fechas.
-    Tabla: student
-    """
+    SEXO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+        ('O', 'Otro'),
+    ]
+    JORNADA_CHOICES = [
+        ('D', 'Diurna'),
+        ('V', 'Vespertina'),
+    ]
+
     first_name = models.CharField(max_length=100, verbose_name='Nombre')
     last_name = models.CharField(max_length=100, verbose_name='Apellido')
+    sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, default='M', verbose_name='Sexo')
+    jornada = models.CharField(max_length=1, choices=JORNADA_CHOICES, default='D', verbose_name='Jornada')
 
     class Meta:
         db_table = 'student'
@@ -220,7 +221,6 @@ class StudentCourse(models.Model):
     # Managers personalizados para borrado lógico
     objects = StudentCourseActiveManager()
     all_objects = Manager()
-    inactive_objects = InactiveManager()
 
     class Meta:
         db_table = 'student_course'

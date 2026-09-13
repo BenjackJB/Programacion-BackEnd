@@ -54,10 +54,7 @@ class SoftDeleteAdmin(admin.ModelAdmin):
     @admin.action(description='Eliminar permanentemente seleccionados')
     def hard_delete_selected(self, request, queryset):
         """Borrado físico de la base de datos."""
-        count = 0
-        for obj in queryset:
-            obj.delete(keep_parents=True)
-            count += 1
+        count = queryset.delete()[0]
         self.message_user(request, f'{count} registro(s) eliminado(s) permanentemente.')
 
 
@@ -67,8 +64,9 @@ class SoftDeleteAdmin(admin.ModelAdmin):
 
 @admin.register(Teacher)
 class TeacherAdmin(SoftDeleteAdmin):
-    list_display = ('id', 'full_name', 'first_name', 'last_name', 'courses_count', 'activo', 'fecha_creacion')
+    list_display = ('id', 'full_name', 'first_name', 'last_name', 'sexo', 'courses_count', 'activo', 'fecha_creacion')
     list_display_links = ('id', 'full_name')
+    list_filter = ('activo', 'sexo', 'fecha_creacion')
     search_fields = ('first_name', 'last_name')
     ordering = ('last_name', 'first_name')
     list_per_page = 25
@@ -88,9 +86,9 @@ class TeacherAdmin(SoftDeleteAdmin):
 
 @admin.register(Course)
 class CourseAdmin(SoftDeleteAdmin):
-    list_display = ('id', 'name', 'teacher', 'students_count', 'activo', 'fecha_creacion')
+    list_display = ('id', 'name', 'teacher', 'jornada', 'students_count', 'activo', 'fecha_creacion')
     list_display_links = ('id', 'name')
-    list_filter = ('activo', 'teacher', 'fecha_creacion')
+    list_filter = ('activo', 'jornada', 'teacher', 'fecha_creacion')
     search_fields = ('name', 'teacher__first_name', 'teacher__last_name')
     raw_id_fields = ('teacher',)
     ordering = ('name',)
@@ -107,8 +105,9 @@ class CourseAdmin(SoftDeleteAdmin):
 
 @admin.register(Student)
 class StudentAdmin(SoftDeleteAdmin):
-    list_display = ('id', 'full_name', 'first_name', 'last_name', 'courses_count', 'activo', 'fecha_creacion')
+    list_display = ('id', 'full_name', 'first_name', 'last_name', 'sexo', 'jornada', 'courses_count', 'activo', 'fecha_creacion')
     list_display_links = ('id', 'full_name')
+    list_filter = ('activo', 'sexo', 'jornada', 'fecha_creacion')
     search_fields = ('first_name', 'last_name')
     ordering = ('last_name', 'first_name')
     list_per_page = 25

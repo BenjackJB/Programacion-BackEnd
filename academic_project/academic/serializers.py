@@ -16,13 +16,10 @@ from .models import Teacher, Course, Student, StudentCourse
 # =============================================================================
 
 class TeacherSerializer(serializers.ModelSerializer):
-    """
-    Serializer para el modelo Teacher.
-    Incluye campo computado 'full_name' y conteo de cursos.
-    """
     full_name = serializers.ReadOnlyField()
     courses_count = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
+    sexo = serializers.CharField(help_text='Sexo: M=Masculino, F=Femenino, O=Otro')
 
     def get_courses_count(self, obj):
         if hasattr(obj, 'courses_count') and obj.courses_count is not None:
@@ -31,7 +28,7 @@ class TeacherSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Teacher
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'courses_count', 'activo', 'fecha_creacion']
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'courses_count', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
 
 
@@ -40,10 +37,6 @@ class TeacherSerializer(serializers.ModelSerializer):
 # =============================================================================
 
 class CourseSerializer(serializers.ModelSerializer):
-    """
-    Serializer para el modelo Course.
-    Incluye datos del teacher relacionado y conteo de estudiantes.
-    """
     teacher = TeacherSerializer(read_only=True)
     teacher_id = serializers.PrimaryKeyRelatedField(
         queryset=Teacher.objects.all(),
@@ -54,6 +47,7 @@ class CourseSerializer(serializers.ModelSerializer):
     students_count = serializers.SerializerMethodField()
     students = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
+    jornada = serializers.CharField(help_text='Jornada: D=Diurna, V=Vespertina')
 
     def get_students_count(self, obj):
         if hasattr(obj, 'students_count') and obj.students_count is not None:
@@ -61,15 +55,15 @@ class CourseSerializer(serializers.ModelSerializer):
         return obj.student_courses.filter(activo=True, student__activo=True).count() if hasattr(obj, 'student_courses') else 0
 
     def get_students(self, obj):
-        """Retorna los estudiantes activos inscritos en el curso."""
+        active_enrollments = obj.student_courses.filter(activo=True, student__activo=True)
         return StudentListSerializer(
-            [enrollment.student for enrollment in obj.student_courses.all()],
+            [enrollment.student for enrollment in active_enrollments],
             many=True
         ).data
 
     class Meta:
         model = Course
-        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'students', 'activo', 'fecha_creacion']
+        fields = ['id', 'name', 'teacher', 'teacher_id', 'jornada', 'students_count', 'students', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'students_count']
 
 
@@ -78,13 +72,11 @@ class CourseSerializer(serializers.ModelSerializer):
 # =============================================================================
 
 class StudentSerializer(serializers.ModelSerializer):
-    """
-    Serializer para el modelo Student.
-    Incluye campo computado 'full_name' y conteo de cursos.
-    """
     full_name = serializers.ReadOnlyField()
     courses_count = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
+    sexo = serializers.CharField(help_text=' Sexo: M=Masculino, F=Femenino, O=Otro')
+    jornada = serializers.CharField(help_text='Jornada: D=Diurna, V=Vespertina')
 
     def get_courses_count(self, obj):
         if hasattr(obj, 'courses_count') and obj.courses_count is not None:
@@ -93,7 +85,7 @@ class StudentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Student
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'courses_count', 'activo', 'fecha_creacion']
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'jornada', 'courses_count', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
 
 
@@ -166,53 +158,11 @@ class StudentCourseSerializer(serializers.ModelSerializer):
 # SERIALIZERS ESPECIALES PARA VISTAS ESPECÍFICAS (LISTADOS)
 # =============================================================================
 
-class CourseListSerializer(serializers.ModelSerializer):
-    """
-    Serializer optimizado para listado de cursos (vista courses.html).
-    Incluye solo campos necesarios: id, name, teacher, activo, estudiantes, fechas.
-    """
-    teacher = TeacherSerializer(read_only=True)
-    teacher_id = serializers.PrimaryKeyRelatedField(
-        queryset=Teacher.objects.all(),
-        source='teacher',
-        write_only=True,
-        help_text='ID del docente asignado'
-    )
-    students_count = serializers.SerializerMethodField()
-    students = serializers.SerializerMethodField()
-
-    def get_students_count(self, obj):
-        if hasattr(obj, 'students_count') and obj.students_count is not None:
-            return obj.students_count
-        return obj.student_courses.filter(activo=True, student__activo=True).count() if hasattr(obj, 'student_courses') else 0
-
-    def get_students(self, obj):
-        """Retorna los estudiantes activos inscritos en el curso."""
-        return StudentListSerializer(
-            [enrollment.student for enrollment in obj.student_courses.all()],
-            many=True
-        ).data
-
-    class Meta:
-        model = Course
-        fields = ['id', 'name', 'teacher', 'teacher_id', 'students_count', 'students', 'activo', 'fecha_creacion']
-        read_only_fields = ['id', 'fecha_creacion', 'students_count']
+class CourseListSerializer(CourseSerializer):
+    class Meta(CourseSerializer.Meta):
+        pass
 
 
-class StudentListSerializer(serializers.ModelSerializer):
-    """
-    Serializer optimizado para listado de estudiantes (vista students.html).
-    Incluye solo campos necesarios: id, full_name, cursos, activo, fechas.
-    """
-    full_name = serializers.ReadOnlyField()
-    courses_count = serializers.SerializerMethodField()
-
-    def get_courses_count(self, obj):
-        if hasattr(obj, 'courses_count') and obj.courses_count is not None:
-            return obj.courses_count
-        return obj.student_courses.filter(activo=True, course__activo=True).count() if hasattr(obj, 'student_courses') else 0
-
-    class Meta:
-        model = Student
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'courses_count', 'activo', 'fecha_creacion']
-        read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
+class StudentListSerializer(StudentSerializer):
+    class Meta(StudentSerializer.Meta):
+        pass

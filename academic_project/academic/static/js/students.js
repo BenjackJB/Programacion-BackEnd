@@ -39,6 +39,25 @@
                     `
                 },
                 {
+                    key: 'sexo',
+                    class: 'text-center',
+                    format: (v) => {
+                        const labels = { 'M': 'Masculino', 'F': 'Femenino', 'O': 'Otro' };
+                        const icons = { 'M': 'bi-gender-male', 'F': 'bi-gender-female', 'O': 'bi-gender-ambiguous' };
+                        const colors = { 'M': 'bg-primary', 'F': 'bg-danger', 'O': 'bg-secondary' };
+                        return `<span class="badge ${colors[v] || 'bg-secondary'}"><i class="bi ${icons[v] || 'bi-person'} me-1"></i>${labels[v] || v}</span>`;
+                    }
+                },
+                {
+                    key: 'jornada',
+                    class: 'text-center',
+                    format: (v) => {
+                        const labels = { 'D': 'Diurna', 'V': 'Vespertina' };
+                        const colors = { 'D': 'bg-info', 'V': 'bg-warning text-dark' };
+                        return `<span class="badge ${colors[v] || 'bg-secondary'}"><i class="bi bi-clock me-1"></i>${labels[v] || v}</span>`;
+                    }
+                },
+                {
                     key: 'courses_count',
                     class: 'text-center',
                     format: (v) => {
@@ -76,16 +95,23 @@
     function initSearchAndOrderingUI() {
         const searchInput = document.getElementById('students-search');
         const orderingSelect = document.getElementById('students-ordering');
+        const sexoFilter = document.getElementById('students-sexo-filter');
+        const jornadaFilter = document.getElementById('students-jornada-filter');
 
         if (searchInput) {
             const debouncedSearch = AcademicCore.debounce((term) => studentsTable.setSearch(term), 300);
             searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
         }
-
         if (orderingSelect) {
             orderingSelect.addEventListener('change', (e) => {
                 if (e.target.value) studentsTable.setOrdering(e.target.value);
             });
+        }
+        if (sexoFilter) {
+            sexoFilter.addEventListener('change', (e) => studentsTable.setFilter('sexo', e.target.value));
+        }
+        if (jornadaFilter) {
+            jornadaFilter.addEventListener('change', (e) => studentsTable.setFilter('jornada', e.target.value));
         }
     }
 
@@ -97,6 +123,8 @@
             fields: [
                 { name: 'first_name', id: 'student-first-name', type: 'text', required: true },
                 { name: 'last_name', id: 'student-last-name', type: 'text', required: true },
+                { name: 'sexo', id: 'student-sexo', type: 'select', required: true },
+                { name: 'jornada', id: 'student-jornada', type: 'select', required: true },
             ],
             onSuccess: () => studentsTable.load(),
             validate: (data) => {

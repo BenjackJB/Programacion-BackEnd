@@ -48,6 +48,15 @@
                     }
                 },
                 {
+                    key: 'jornada',
+                    class: 'text-center',
+                    format: (v) => {
+                        const labels = { 'D': 'Diurna', 'V': 'Vespertina' };
+                        const colors = { 'D': 'bg-info', 'V': 'bg-warning text-dark' };
+                        return `<span class="badge ${colors[v] || 'bg-secondary'}"><i class="bi bi-clock me-1"></i>${labels[v] || v}</span>`;
+                    }
+                },
+                {
                     key: 'students_count',
                     format: (v, course) => {
                         const students = course.students || [];
@@ -86,16 +95,19 @@
     function initSearchAndOrderingUI() {
         const searchInput = document.getElementById('courses-search');
         const orderingSelect = document.getElementById('courses-ordering');
+        const jornadaFilter = document.getElementById('courses-jornada-filter');
 
         if (searchInput) {
             const debouncedSearch = AcademicCore.debounce((term) => coursesTable.setSearch(term), 300);
             searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
         }
-
         if (orderingSelect) {
             orderingSelect.addEventListener('change', (e) => {
                 if (e.target.value) coursesTable.setOrdering(e.target.value);
             });
+        }
+        if (jornadaFilter) {
+            jornadaFilter.addEventListener('change', (e) => coursesTable.setFilter('jornada', e.target.value));
         }
     }
 
@@ -107,6 +119,7 @@
             fields: [
                 { name: 'name', id: 'course-name', type: 'text', required: true },
                 { name: 'teacher_id', id: 'course-teacher', type: 'number', required: true },
+                { name: 'jornada', id: 'course-jornada', type: 'select', required: true },
             ],
             onSuccess: () => coursesTable.load(),
             validate: (data) => {

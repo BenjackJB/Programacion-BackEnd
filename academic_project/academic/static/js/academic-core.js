@@ -245,6 +245,14 @@
             this.totalPages = 1;
             this.searchTerm = '';
             this.ordering = '';
+            this.filters = {};
+        }
+
+        setFilter(key, value) {
+            if (value) this.filters[key] = value;
+            else delete this.filters[key];
+            this.currentPage = 1;
+            this.load();
         }
 
         getLoadingEl() { return document.getElementById(this.config.loadingId); }
@@ -282,6 +290,7 @@
             params.set('page', this.currentPage);
             if (this.searchTerm) params.set('search', this.searchTerm);
             if (this.ordering) params.set('ordering', this.ordering);
+            Object.entries(this.filters).forEach(([key, val]) => params.set(key, val));
             return params.toString();
         }
 
@@ -295,7 +304,8 @@
 
                 this.data = response.results || response;
                 this.totalCount = response.count ?? this.data.length;
-                this.totalPages = Math.ceil(this.totalCount / (response.results ? 10 : this.data.length)) || 1;
+                const pageSize = response.results ? (response.results.length || 20) : this.data.length;
+                this.totalPages = Math.ceil(this.totalCount / pageSize) || 1;
 
                 this.render();
                 this.updateCount(this.totalCount);
@@ -320,6 +330,7 @@
             }
 
             this.showEmpty(false);
+            const isSuperuser = document.body.dataset.isSuperuser === 'true';
             this.data.forEach(item => {
                 const tr = document.createElement('tr');
                 if (this.config.rowClass) tr.className = this.config.rowClass;
@@ -332,7 +343,7 @@
                     rowHtml += `<td${col.class ? ` class="${col.class}"` : ''}>${formatted}</td>`;
                 });
 
-                if (this.config.actionsColumn) {
+                if (this.config.actionsColumn && isSuperuser) {
                     rowHtml += this.config.actionsColumn(item);
                 }
 

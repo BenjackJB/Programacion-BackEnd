@@ -28,9 +28,24 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <div class="row g-2 search-ordering-row align-items-center">
-            <div class="col-12 col-md-6 search-input-wrapper">
+            <div class="col-12 col-md-3 search-input-wrapper">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <input type="search" class="form-control form-control-sm" id="students-search" placeholder="Buscar estudiantes..." aria-label="Buscar estudiantes" autocomplete="off">
+            </div>
+            <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" id="students-sexo-filter" aria-label="Filtrar por sexo">
+                    <option value="">Todos los sexos</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="O">Otro</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" id="students-jornada-filter" aria-label="Filtrar por jornada">
+                    <option value="">Todas las jornadas</option>
+                    <option value="D">Diurna</option>
+                    <option value="V">Vespertina</option>
+                </select>
             </div>
             <div class="col-12 col-md-3">
                 <select class="form-select form-select-sm ordering-select" id="students-ordering" aria-label="Ordenar estudiantes">
@@ -70,6 +85,8 @@
                         <tr>
                             <th scope="col" style="width: 60px;" aria-sort="none">ID</th>
                             <th scope="col" data-order="last_name" aria-sort="none">Estudiante <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="sexo" aria-sort="none">Sexo <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="jornada" aria-sort="none">Jornada <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" data-order="courses_count" aria-sort="none">Cursos Inscritos <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" style="width: 100px;" aria-sort="none">Estado</th>
                             {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
@@ -110,6 +127,23 @@
                         <input type="text" class="form-control" id="student-last-name" name="last_name" required aria-required="true" aria-describedby="student-last-name-help">
                         <div id="student-last-name-help" class="form-text">Apellido del estudiante</div>
                         <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label for="student-sexo" class="form-label">Sexo <span class="text-danger" aria-hidden="true">*</span></label>
+                            <select class="form-select" id="student-sexo" name="sexo" required aria-required="true">
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                                <option value="O">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label for="student-jornada" class="form-label">Jornada <span class="text-danger" aria-hidden="true">*</span></label>
+                            <select class="form-select" id="student-jornada" name="jornada" required aria-required="true">
+                                <option value="D">Diurna</option>
+                                <option value="V">Vespertina</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -28,11 +28,18 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <div class="row g-2 search-ordering-row align-items-center">
-            <div class="col-12 col-md-6 search-input-wrapper">
+            <div class="col-12 col-md-4 search-input-wrapper">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <input type="search" class="form-control form-control-sm" id="courses-search" placeholder="Buscar cursos, docentes..." aria-label="Buscar cursos" autocomplete="off">
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" id="courses-jornada-filter" aria-label="Filtrar por jornada">
+                    <option value="">Todas las jornadas</option>
+                    <option value="D">Diurna</option>
+                    <option value="V">Vespertina</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
                 <select class="form-select form-select-sm ordering-select" id="courses-ordering" aria-label="Ordenar cursos">
                     <option value="">Ordenar por...</option>
                     <option value="name">Nombre (A-Z)</option>
@@ -70,7 +77,8 @@
                         <tr>
                             <th scope="col" style="width: 60px;" aria-sort="none">ID</th>
                             <th scope="col" data-order="name" aria-sort="none">Curso <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
-                            <th scope="col" data-order="teacher_name" aria-sort="none">Docente Asignado <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="teacher__last_name" aria-sort="none">Docente Asignado <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="jornada" aria-sort="none">Jornada <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" data-order="students_count" aria-sort="none">Alumnos Inscritos <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
                             <th scope="col" style="width: 100px;" aria-sort="none">Estado</th>
                             {% if user.is_superuser %}<th scope="col" style="width: 180px;">Acciones</th>{% endif %}
@@ -135,6 +143,14 @@
                             <option value="">Selecciona un docente</option>
                         </select>
                         <div id="course-teacher-help" class="form-text">Docente responsable del curso</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="course-jornada" class="form-label">Jornada <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select class="form-select" id="course-jornada" name="jornada" required aria-required="true">
+                            <option value="D">Diurna</option>
+                            <option value="V">Vespertina</option>
+                        </select>
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>

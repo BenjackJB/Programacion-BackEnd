@@ -33,87 +33,96 @@ class Command(BaseCommand):
         else:
             self.stdout.write('Superusuario "admin" ya existe.')
 
+        # Crear usuario profesor si no existe
+        if not User.objects.filter(username='profe').exists():
+            profe = User.objects.create_user('profe', 'profe@example.com', '123456', is_staff=True, is_superuser=True)
+            self.stdout.write(self.style.SUCCESS('Usuario creado: profe / 123456'))
+        else:
+            self.stdout.write('Usuario "profe" ya existe.')
+
         # Crear docentes
         docentes_data = [
-            {'first_name': 'Carlos', 'last_name': 'Mendoza'},
-            {'first_name': 'Ana', 'last_name': 'Garcia'},
-            {'first_name': 'Luis', 'last_name': 'Rodriguez'},
-            {'first_name': 'Maria', 'last_name': 'Lopez'},
-            {'first_name': 'Pedro', 'last_name': 'Martinez'},
-            {'first_name': 'Laura', 'last_name': 'Hernandez'},
-            {'first_name': 'Jorge', 'last_name': 'Diaz'},
-            {'first_name': 'Sofia', 'last_name': 'Torres'},
+            {'first_name': 'Carlos', 'last_name': 'Mendoza', 'sexo': 'M'},
+            {'first_name': 'Ana', 'last_name': 'Garcia', 'sexo': 'F'},
+            {'first_name': 'Luis', 'last_name': 'Rodriguez', 'sexo': 'M'},
+            {'first_name': 'Maria', 'last_name': 'Lopez', 'sexo': 'F'},
+            {'first_name': 'Pedro', 'last_name': 'Martinez', 'sexo': 'M'},
+            {'first_name': 'Laura', 'last_name': 'Hernandez', 'sexo': 'F'},
+            {'first_name': 'Jorge', 'last_name': 'Diaz', 'sexo': 'M'},
+            {'first_name': 'Sofia', 'last_name': 'Torres', 'sexo': 'F'},
         ]
 
         docentes = []
         for data in docentes_data:
             teacher, created = Teacher.objects.get_or_create(
                 first_name=data['first_name'],
-                last_name=data['last_name']
+                last_name=data['last_name'],
+                defaults={'sexo': data['sexo']}
             )
             docentes.append(teacher)
             if created:
-                self.stdout.write(f'  Docente creado: {teacher.first_name} {teacher.last_name}')
+                self.stdout.write(f'  Docente creado: {teacher.first_name} {teacher.last_name} ({teacher.get_sexo_display()})')
 
-        # Crear cursos
+        # Crear cursos con jornada
         cursos_data = [
-            {'name': 'Matematicas I', 'teacher': docentes[0]},
-            {'name': 'Fisica I', 'teacher': docentes[1]},
-            {'name': 'Programacion I', 'teacher': docentes[2]},
-            {'name': 'Base de Datos', 'teacher': docentes[3]},
-            {'name': 'Redes de Computadoras', 'teacher': docentes[4]},
-            {'name': 'Ingenieria de Software', 'teacher': docentes[5]},
-            {'name': 'Inteligencia Artificial', 'teacher': docentes[6]},
-            {'name': 'Sistemas Operativos', 'teacher': docentes[7]},
-            {'name': 'Estructuras de Datos', 'teacher': docentes[2]},
-            {'name': 'Calculo II', 'teacher': docentes[0]},
+            {'name': 'Matematicas I', 'teacher': docentes[0], 'jornada': 'D'},
+            {'name': 'Fisica I', 'teacher': docentes[1], 'jornada': 'D'},
+            {'name': 'Programacion I', 'teacher': docentes[2], 'jornada': 'V'},
+            {'name': 'Base de Datos', 'teacher': docentes[3], 'jornada': 'V'},
+            {'name': 'Redes de Computadoras', 'teacher': docentes[4], 'jornada': 'D'},
+            {'name': 'Ingenieria de Software', 'teacher': docentes[5], 'jornada': 'V'},
+            {'name': 'Inteligencia Artificial', 'teacher': docentes[6], 'jornada': 'D'},
+            {'name': 'Sistemas Operativos', 'teacher': docentes[7], 'jornada': 'V'},
+            {'name': 'Estructuras de Datos', 'teacher': docentes[2], 'jornada': 'D'},
+            {'name': 'Calculo II', 'teacher': docentes[0], 'jornada': 'V'},
         ]
 
         cursos = []
         for data in cursos_data:
             course, created = Course.objects.get_or_create(
                 name=data['name'],
-                defaults={'teacher': data['teacher']}
+                defaults={'teacher': data['teacher'], 'jornada': data['jornada']}
             )
             cursos.append(course)
             if created:
-                self.stdout.write(f'  Curso creado: {course.name}')
+                self.stdout.write(f'  Curso creado: {course.name} ({course.get_jornada_display()})')
 
-        # Crear estudiantes
+        # Crear estudiantes con sexo y jornada
         estudiantes_data = [
-            {'first_name': 'Juan', 'last_name': 'Perez'},
-            {'first_name': 'Diego', 'last_name': 'Sanchez'},
-            {'first_name': 'Camila', 'last_name': 'Ramirez'},
-            {'first_name': 'Valentina', 'last_name': 'Torres'},
-            {'first_name': 'Mateo', 'last_name': 'Flores'},
-            {'first_name': 'Isabella', 'last_name': 'Gomez'},
-            {'first_name': 'Sebastian', 'last_name': 'Diaz'},
-            {'first_name': 'Daniela', 'last_name': 'Vargas'},
-            {'first_name': 'Nicolas', 'last_name': 'Morales'},
-            {'first_name': 'Luciana', 'last_name': 'Cruz'},
-            {'first_name': 'Andres', 'last_name': 'Reyes'},
-            {'first_name': 'Paula', 'last_name': 'Ortiz'},
-            {'first_name': 'Felipe', 'last_name': 'Gutierrez'},
-            {'first_name': 'Mariana', 'last_name': 'Castillo'},
-            {'first_name': 'Alejandro', 'last_name': 'Jimenez'},
-            {'first_name': 'Carolina', 'last_name': 'Ruiz'},
-            {'first_name': 'Daniel', 'last_name': 'Alvarez'},
-            {'first_name': 'Gabriela', 'last_name': 'Mendoza'},
-            {'first_name': 'Mateo', 'last_name': 'Herrera'},
-            {'first_name': 'Lucia', 'last_name': 'Aguilar'},
+            {'first_name': 'Juan', 'last_name': 'Perez', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Diego', 'last_name': 'Sanchez', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Camila', 'last_name': 'Ramirez', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Valentina', 'last_name': 'Torres', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Mateo', 'last_name': 'Flores', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Isabella', 'last_name': 'Gomez', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Sebastian', 'last_name': 'Diaz', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Daniela', 'last_name': 'Vargas', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Nicolas', 'last_name': 'Morales', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Luciana', 'last_name': 'Cruz', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Andres', 'last_name': 'Reyes', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Paula', 'last_name': 'Ortiz', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Felipe', 'last_name': 'Gutierrez', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Mariana', 'last_name': 'Castillo', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Alejandro', 'last_name': 'Jimenez', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Carolina', 'last_name': 'Ruiz', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Daniel', 'last_name': 'Alvarez', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Gabriela', 'last_name': 'Mendoza', 'sexo': 'F', 'jornada': 'V'},
+            {'first_name': 'Mateo', 'last_name': 'Herrera', 'sexo': 'M', 'jornada': 'D'},
+            {'first_name': 'Lucia', 'last_name': 'Aguilar', 'sexo': 'F', 'jornada': 'V'},
         ]
 
         estudiantes = []
         for data in estudiantes_data:
             student, created = Student.objects.get_or_create(
                 first_name=data['first_name'],
-                last_name=data['last_name']
+                last_name=data['last_name'],
+                defaults={'sexo': data['sexo'], 'jornada': data['jornada']}
             )
             estudiantes.append(student)
             if created:
-                self.stdout.write(f'  Estudiante creado: {student.first_name} {student.last_name}')
+                self.stdout.write(f'  Estudiante creado: {student.first_name} {student.last_name} ({student.get_sexo_display()})')
 
-        # Crear inscripciones (cada estudiante en 2-4 cursos)
+        # Crear inscripciones
         inscripciones_data = [
             (0, [0, 2, 4]),
             (1, [0, 3, 5]),
@@ -154,3 +163,5 @@ class Command(BaseCommand):
         self.stdout.write(f'  - {Student.objects.count()} estudiantes')
         self.stdout.write(f'  - {StudentCourse.objects.count()} inscripciones')
         self.stdout.write('\nCredenciales de acceso: admin / admin123')
+        self.stdout.write('JWT: POST /api/token/ con {"username": "admin", "password": "admin123"}')
+        self.stdout.write('Docs: /docs/')
