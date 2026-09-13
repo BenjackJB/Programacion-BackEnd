@@ -78,7 +78,7 @@ class TeacherAdmin(SoftDeleteAdmin):
     full_name.short_description = 'Nombre Completo'
 
     def courses_count(self, obj):
-        return obj.courses_count
+        return obj.courses.filter(activo=True).count()
     courses_count.short_description = 'Cursos'
 
 
@@ -97,7 +97,7 @@ class CourseAdmin(SoftDeleteAdmin):
     list_per_page = 25
 
     def students_count(self, obj):
-        return obj.students_count
+        return obj.student_courses.filter(activo=True, student__activo=True).count()
     students_count.short_description = 'Estudiantes'
 
 
@@ -118,7 +118,7 @@ class StudentAdmin(SoftDeleteAdmin):
     full_name.short_description = 'Nombre Completo'
 
     def courses_count(self, obj):
-        return obj.courses_count
+        return obj.student_courses.filter(activo=True, course__activo=True).count()
     courses_count.short_description = 'Cursos'
 
 
