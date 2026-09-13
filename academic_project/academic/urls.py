@@ -9,6 +9,7 @@ Incluye:
 """
 
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from . import views
 
@@ -52,5 +53,13 @@ urlpatterns = [
         }),
         name='enrollment-detail-composite'
     ),
+    # POST /api/enrollments/<student_id>/<course_id>/restore/
+    path(
+        'api/enrollments/<int:student_id>/<int:course_id>/restore/',
+        views.StudentCourseViewSet.as_view({'post': 'restore'}),
+        name='enrollment-restore-composite'
+    ),
 
+    # Catch-all: cualquier ruta desconocida se redirige a courses (evita 404).
+    path('<path:unknown_path>', RedirectView.as_view(url='/courses/', permanent=False)),
 ]

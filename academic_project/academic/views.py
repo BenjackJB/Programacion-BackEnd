@@ -13,19 +13,15 @@ NOTA: StudentCourse usa PK compuesta (student, course) - se maneja con lookup_ur
 # IMPORTS
 # =============================================================================
 
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth import logout
-from django.utils.decorators import method_decorator
-from django.http import JsonResponse
+from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import reverse_lazy
 
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -33,7 +29,6 @@ from .models import Teacher, Course, Student, StudentCourse
 from django.db.models import Prefetch, Count, Q
 from .serializers import (
     TeacherSerializer, CourseSerializer, StudentSerializer, StudentCourseSerializer,
-    CourseListSerializer, StudentListSerializer
 )
 from .permissions import IsSuperUserOrReadOnly
 
@@ -154,9 +149,6 @@ class HomeView(BaseTemplateView):
     Evita error 404 en ruta raíz "/".
     """
     def get(self, request, *args, **kwargs):
-        # Si ya está en /courses/, no redirigir para evitar loop
-        if request.path == '/courses/':
-            return render(request, 'academic/courses.html', self.get_context_data())
         return redirect('courses')
 
 
@@ -212,6 +204,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.all_objects.select_related('teacher').all()
+    serializer_class = CourseSerializer
     permission_classes = [IsSuperUserOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'jornada', 'teacher']
@@ -222,12 +215,6 @@ class CourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
         serializer.save()
-
-    def get_serializer_class(self):
-        """Usa serializer optimizado para listado."""
-        if self.action == 'list':
-            return CourseListSerializer
-        return CourseSerializer
 
     def get_queryset(self):
         """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
@@ -305,12 +292,6 @@ class StudentViewSet(viewsets.ModelViewSet):
         self.check_object_permissions(self.request, obj)
         return obj
 
-    def get_serializer_class(self):
-        """Usa serializer optimizado para listado."""
-        if self.action == 'list':
-            return StudentListSerializer
-        return StudentSerializer
-
     def perform_destroy(self, instance):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
@@ -337,10 +318,6 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
         serializer.save()
-
-    # Configuración para PK compuesta
-    lookup_fields = ['student_id', 'course_id']
-    lookup_url_kwargs = ['student_id', 'course_id']
 
     def get_object(self):
         """

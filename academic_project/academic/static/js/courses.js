@@ -41,7 +41,7 @@
                     `
                 },
                 {
-                    key: 'teacher_name',
+                    key: 'teacher.full_name',
                     format: (v, course) => {
                         const name = v || course.teacher?.full_name || 'Sin asignar';
                         return `<span class="badge bg-primary teacher-badge text-white">${escapeHtml(name)}</span>`;

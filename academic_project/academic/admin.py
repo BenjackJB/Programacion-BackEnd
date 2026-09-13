@@ -135,8 +135,14 @@ class StudentCourseAdmin(SoftDeleteAdmin):
     ordering = ('-fecha_creacion',)
     list_per_page = 30
 
-    # Campos de solo lectura para PK compuesta
-    readonly_fields = ('student', 'course', 'fecha_creacion', 'fecha_actualizacion')
+    # Campos de solo lectura para PK compuesta (solo al editar, no al crear)
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+    def get_readonly_fields(self, request, obj=None):
+        """Al editar una inscripción, student/course (PK) no se pueden cambiar."""
+        if obj:
+            return ('student', 'course', 'fecha_creacion', 'fecha_actualizacion')
+        return self.readonly_fields
 
     def has_add_permission(self, request):
         """Permitir agregar nuevas inscripciones."""

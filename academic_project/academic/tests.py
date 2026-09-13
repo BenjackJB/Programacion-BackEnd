@@ -483,20 +483,29 @@ class PermissionsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_unauthenticated_cannot_write(self):
-        """Sin autenticar: no puede crear ni modificar registros."""
+        """Sin autenticar: no puede crear ni modificar registros (401 = debe autenticarse)."""
         response = self.client.post('/api/teachers/', {'first_name': 'New', 'last_name': 'Teacher'})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_authenticated_non_superuser_cannot_write(self):
+        """Autenticado pero no superusuario: escritura denegada (403)."""
+        self.client.force_authenticate(user=self.normal_user)
+        data = {'first_name': 'New', 'last_name': 'Teacher', 'sexo': 'M'}
+        response = self.client.post('/api/teachers/', data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_superuser_sees_inactive_records_but_anonymous_does_not(self):
-        """Nadie ve registros inactivos en el listado API (soft delete los oculta)."""
+        """El superusuario ve registros inactivos (para restaurarlos); el resto no."""
         inactive_teacher = Teacher.objects.create(first_name='Inactivo', last_name='Docente')
         inactive_teacher.soft_delete()
 
+        # Superusuario SÍ los ve
         self.client.force_authenticate(user=self.superuser)
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
+        self.assertTrue(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
 
+        # Anónimo NO los ve
         self.client.force_authenticate(user=None)
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)

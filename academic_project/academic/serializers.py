@@ -19,7 +19,7 @@ class TeacherSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
     courses_count = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
-    sexo = serializers.CharField(help_text='Sexo: M=Masculino, F=Femenino, O=Otro')
+    sexo = serializers.ChoiceField(required=False, default='M', choices=['M', 'F', 'O'], help_text='Sexo: M=Masculino, F=Femenino, O=Otro')
 
     def get_courses_count(self, obj):
         if hasattr(obj, 'courses_count') and obj.courses_count is not None:
@@ -30,6 +30,15 @@ class TeacherSerializer(serializers.ModelSerializer):
         model = Teacher
         fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'courses_count', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
+
+
+class TeacherBriefSerializer(serializers.ModelSerializer):
+    """Versión ligera de Teacher para anidar en otros serializers (sin N+1)."""
+    full_name = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Teacher
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'activo']
 
 
 # =============================================================================
@@ -47,7 +56,7 @@ class CourseSerializer(serializers.ModelSerializer):
     students_count = serializers.SerializerMethodField()
     students = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
-    jornada = serializers.CharField(help_text='Jornada: D=Diurna, V=Vespertina')
+    jornada = serializers.ChoiceField(required=False, default='D', choices=['D', 'V'], help_text='Jornada: D=Diurna, V=Vespertina')
 
     def get_students_count(self, obj):
         if hasattr(obj, 'students_count') and obj.students_count is not None:
@@ -55,16 +64,27 @@ class CourseSerializer(serializers.ModelSerializer):
         return obj.student_courses.filter(activo=True, student__activo=True).count() if hasattr(obj, 'student_courses') else 0
 
     def get_students(self, obj):
-        active_enrollments = obj.student_courses.filter(activo=True, student__activo=True)
-        return StudentListSerializer(
-            [enrollment.student for enrollment in active_enrollments],
-            many=True
-        ).data
+        # Usa el cache de prefetch_related si existe; si no, ejecuta una sola query.
+        students = [
+            enrollment.student
+            for enrollment in obj.student_courses.all()
+            if enrollment.activo is not False and enrollment.student.activo
+        ]
+        return StudentBriefSerializer(students, many=True).data
 
     class Meta:
         model = Course
         fields = ['id', 'name', 'teacher', 'teacher_id', 'jornada', 'students_count', 'students', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'students_count']
+
+
+class CourseBriefSerializer(serializers.ModelSerializer):
+    """Versión ligera de Course para anidar en otros serializers (sin N+1)."""
+    teacher = TeacherBriefSerializer(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = ['id', 'name', 'teacher', 'jornada', 'activo']
 
 
 # =============================================================================
@@ -75,8 +95,8 @@ class StudentSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
     courses_count = serializers.SerializerMethodField()
     activo = serializers.BooleanField(required=False, default=True)
-    sexo = serializers.CharField(help_text=' Sexo: M=Masculino, F=Femenino, O=Otro')
-    jornada = serializers.CharField(help_text='Jornada: D=Diurna, V=Vespertina')
+    sexo = serializers.ChoiceField(required=False, default='M', choices=['M', 'F', 'O'], help_text='Sexo: M=Masculino, F=Femenino, O=Otro')
+    jornada = serializers.ChoiceField(required=False, default='D', choices=['D', 'V'], help_text='Jornada: D=Diurna, V=Vespertina')
 
     def get_courses_count(self, obj):
         if hasattr(obj, 'courses_count') and obj.courses_count is not None:
@@ -87,6 +107,15 @@ class StudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'jornada', 'courses_count', 'activo', 'fecha_creacion']
         read_only_fields = ['id', 'fecha_creacion', 'courses_count', 'full_name']
+
+
+class StudentBriefSerializer(serializers.ModelSerializer):
+    """Versión ligera de Student para anidar en otros serializers (sin N+1)."""
+    full_name = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'jornada', 'activo']
 
 
 # =============================================================================
@@ -100,8 +129,8 @@ class StudentCourseSerializer(serializers.ModelSerializer):
     Para lectura: incluye objetos anidados student y course.
     Para escritura: usa student_id y course_id.
     """
-    student = StudentSerializer(read_only=True)
-    course = CourseSerializer(read_only=True)
+    student = StudentBriefSerializer(read_only=True)
+    course = CourseBriefSerializer(read_only=True)
     student_id = serializers.PrimaryKeyRelatedField(
         queryset=Student.objects.filter(activo=True),
         source='student',
@@ -152,17 +181,3 @@ class StudentCourseSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
-
-
-# =============================================================================
-# SERIALIZERS ESPECIALES PARA VISTAS ESPECÍFICAS (LISTADOS)
-# =============================================================================
-
-class CourseListSerializer(CourseSerializer):
-    class Meta(CourseSerializer.Meta):
-        pass
-
-
-class StudentListSerializer(StudentSerializer):
-    class Meta(StudentSerializer.Meta):
-        pass

@@ -243,6 +243,7 @@
             this.currentPage = 1;
             this.totalCount = 0;
             this.totalPages = 1;
+            this.pageSize = config.pageSize || 20;
             this.searchTerm = '';
             this.ordering = '';
             this.filters = {};
@@ -288,6 +289,7 @@
         buildQueryParams() {
             const params = new URLSearchParams();
             params.set('page', this.currentPage);
+            params.set('page_size', this.pageSize);
             if (this.searchTerm) params.set('search', this.searchTerm);
             if (this.ordering) params.set('ordering', this.ordering);
             Object.entries(this.filters).forEach(([key, val]) => params.set(key, val));
@@ -304,8 +306,7 @@
 
                 this.data = response.results || response;
                 this.totalCount = response.count ?? this.data.length;
-                const pageSize = response.results ? (response.results.length || 20) : this.data.length;
-                this.totalPages = Math.ceil(this.totalCount / pageSize) || 1;
+                this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
 
                 this.render();
                 this.updateCount(this.totalCount);
@@ -360,7 +361,8 @@
 
         renderError(message) {
             const tbody = this.getTbodyEl();
-            const colCount = this.config.columns.length + (this.config.actionsColumn ? 1 : 0);
+            const isSuperuser = document.body.dataset.isSuperuser === 'true';
+            const colCount = this.config.columns.length + (isSuperuser && this.config.actionsColumn ? 1 : 0);
             tbody.innerHTML = `
                 <tr>
                     <td colspan="${colCount}" class="text-center text-danger py-4">
