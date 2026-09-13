@@ -21,7 +21,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options['clear']:
             self.stdout.write('Limpiando datos existentes...')
-            StudentCourse.objects.all().delete()
+            # Se usa all_objects + QuerySet.delete() (borrado físico real, en orden
+            # para respetar las FK PROTECT: inscripciones -> estudiantes -> cursos -> docentes)
+            StudentCourse.all_objects.all().delete()
             Student.all_objects.all().delete()
             Course.all_objects.all().delete()
             Teacher.all_objects.all().delete()

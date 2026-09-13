@@ -152,19 +152,32 @@ class StudentCourseSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_creacion']
 
     def validate(self, attrs):
-        """Validación personalizada: evitar inscripciones duplicadas."""
-        student = attrs.get('student')
-        course = attrs.get('course')
-        if student and course:
-            # Verificar si ya existe inscripción activa
-            exists = StudentCourse.objects.filter(
-                student=student,
-                course=course,
-                activo=True
-            ).exists()
-            if exists and not self.instance:
+        """Validación personalizada: evitar inscripciones duplicadas y estado inválido."""
+        if self.instance is None:
+            # Creación: no permitir duplicados (ni siquiera si la inscripción existente está inactiva,
+            # porque la UniqueConstraint (student, course) impediría el INSERT y causaría un 500).
+            student = attrs.get('student')
+            course = attrs.get('course')
+            if student and course:
+                if not student.activo:
+                    raise serializers.ValidationError(
+                        {'student': 'No se puede inscribir un estudiante inactivo.'}
+                    )
+                if not course.activo:
+                    raise serializers.ValidationError(
+                        {'course': 'No se puede inscribir en un curso inactivo.'}
+                    )
+                if StudentCourse.all_objects.filter(student=student, course=course).exists():
+                    raise serializers.ValidationError(
+                        'El estudiante ya tiene una inscripción en este curso. '
+                        'Restáurela si estaba desactivada.'
+                    )
+        else:
+            # Actualización: no permitir activar una inscripción de estudiante/curso inactivo.
+            activo = attrs.get('activo', self.instance.activo)
+            if activo and (not self.instance.student.activo or not self.instance.course.activo):
                 raise serializers.ValidationError(
-                    'El estudiante ya está inscrito en este curso.'
+                    'No se puede activar una inscripción de un estudiante o curso inactivo.'
                 )
         return attrs
 

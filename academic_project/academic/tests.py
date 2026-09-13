@@ -345,6 +345,14 @@ class StudentCourseAPITest(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_create_duplicate_enrollment_returns_400(self):
+        """Re-inscribir cuando ya existe inscripción inactiva devuelve 400 (no 500)."""
+        self.enrollment.soft_delete()
+        url = reverse('enrollment-list')
+        data = {'student_id': self.student.pk, 'course_id': self.course.pk}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_retrieve_enrollment_composite_pk(self):
         """GET /api/enrollments/{student_id}/{course_id}/"""
         # Usar URL personalizada para PK compuesta
@@ -510,6 +518,24 @@ class PermissionsTest(APITestCase):
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
+
+    def test_normal_user_cannot_retrieve_inactive_detail(self):
+        """Un usuario no superusuario no puede acceder al detalle de un registro inactivo (404)."""
+        inactive_teacher = Teacher.objects.create(first_name='Inactivo', last_name='Detalle')
+        inactive_teacher.soft_delete()
+        self.client.force_authenticate(user=self.normal_user)
+        url = reverse('teacher-detail', kwargs={'pk': inactive_teacher.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_superuser_can_retrieve_inactive_detail(self):
+        """El superusuario sí puede acceder al detalle de un registro inactivo (para restaurarlo)."""
+        inactive_teacher = Teacher.objects.create(first_name='Inactivo', last_name='Detalle')
+        inactive_teacher.soft_delete()
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse('teacher-detail', kwargs={'pk': inactive_teacher.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_admin_queryset_keeps_inactive_records_for_superuser(self):
         """El admin debe conservar registros desactivados para superusuario."""

@@ -37,7 +37,7 @@
         let timeoutId;
         return (...args) => {
             clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => fn.apply(this, args), delay);
+            timeoutId = setTimeout(() => fn(...args), delay);
         };
     }
 
@@ -619,57 +619,8 @@
     }
 
     // =============================================================================
-    // SEARCH & ORDERING UI
-    // =============================================================================
-
-    function initSearchAndOrdering(tableRenderer, config) {
-        const searchInput = document.getElementById(config.searchInputId);
-        const searchBtn = document.getElementById(config.searchBtnId);
-        const orderingSelect = document.getElementById(config.orderingSelectId);
-
-        if (searchInput) {
-            const debouncedSearch = debounce((term) => tableRenderer.setSearch(term), 300);
-            searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
-            searchInput.addEventListener('search', (e) => debouncedSearch(e.target.value.trim()));
-        }
-
-        if (searchBtn) {
-            searchBtn.addEventListener('click', () => {
-                if (searchInput) tableRenderer.setSearch(searchInput.value.trim());
-            });
-        }
-
-        if (orderingSelect) {
-            orderingSelect.addEventListener('change', (e) => {
-                if (e.target.value) tableRenderer.setOrdering(e.target.value);
-            });
-        }
-
-        // Update ordering icons in table headers
-        document.querySelectorAll('th[data-order]').forEach(th => {
-            const field = th.dataset.order;
-            const icon = th.querySelector('.order-icon');
-            if (icon) {
-                const updateIcon = () => {
-                    icon.className = `bi ${tableRenderer.getOrderingIcon(field)} order-icon ms-1`;
-                };
-                updateIcon();
-                const originalLoad = tableRenderer.load.bind(tableRenderer);
-                tableRenderer.load = async function() {
-                    await originalLoad();
-                    updateIcon();
-                };
-            }
-        });
-    }
-
-    // =============================================================================
     // CONFIRMATION DIALOG
     // =============================================================================
-
-    function confirmAction(message, callback) {
-        if (confirm(message)) callback();
-    }
 
     async function confirmDelete(itemName, deleteFn) {
         if (!confirm(`¿Seguro que quieres eliminar ${itemName} con borrado lógico?`)) return;
@@ -707,8 +658,6 @@
         modalManager,
         TableRenderer,
         FormHandler,
-        initSearchAndOrdering,
-        confirmAction,
         confirmDelete,
         confirmToggle,
     };

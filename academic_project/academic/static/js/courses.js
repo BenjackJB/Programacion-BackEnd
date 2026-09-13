@@ -6,7 +6,7 @@
 (function() {
     'use strict';
 
-    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, initSearchAndOrdering, confirmDelete, confirmToggle, escapeHtml, formatDate } = window.AcademicCore;
+    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, escapeHtml, formatDate } = window.AcademicCore;
 
     let coursesTable;
     let courseFormHandler;
