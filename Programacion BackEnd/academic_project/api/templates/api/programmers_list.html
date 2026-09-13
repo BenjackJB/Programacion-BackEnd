@@ -1,0 +1,24 @@
+{% extends 'api/base.html' %}
+{% block title %}Programmers - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-3">Programmers</h1>
+  </div>
+  {% for p in programmers %}
+  <div class="col-md-4 mb-3">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ p.fullname }}</h5>
+        <p class="mb-1"><strong>Nickname:</strong> {{ p.nickname }}</p>
+        <p class="mb-1"><strong>Language:</strong> {{ p.language }}</p>
+        <p class="mb-1"><strong>Age:</strong> {{ p.age }}</p>
+        <a href="{% url 'programmer_detail' p.pk %}" class="btn btn-sm btn-primary mt-2">Ver</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><p class="text-muted">No hay programadores aún.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

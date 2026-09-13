@@ -1,0 +1,128 @@
+{% extends 'academic/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Gestión Académica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .teacher-row:hover { background-color: rgba(155, 89, 182, 0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-person-workspace me-2" aria-hidden="true"></i>{{ page_header }}</h1>
+            <p class="text-muted mb-0">Gestiona los docentes registrados en el sistema.</p>
+        </div>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-light border" id="new-teacher-btn" aria-label="Crear nuevo docente">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo Docente
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Ordering -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 search-ordering-row align-items-center">
+            <div class="col-12 col-md-6 search-input-wrapper">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" class="form-control form-control-sm" id="teachers-search" placeholder="Buscar docentes..." aria-label="Buscar docentes" autocomplete="off">
+            </div>
+            <div class="col-12 col-md-3">
+                <select class="form-select form-select-sm ordering-select" id="teachers-ordering" aria-label="Ordenar docentes">
+                    <option value="">Ordenar por...</option>
+                    <option value="last_name">Apellido (A-Z)</option>
+                    <option value="-last_name">Apellido (Z-A)</option>
+                    <option value="first_name">Nombre (A-Z)</option>
+                    <option value="-first_name">Nombre (Z-A)</option>
+                    <option value="courses_count">Cursos (menos primero)</option>
+                    <option value="-courses_count">Cursos (más primero)</option>
+                    <option value="fecha_creacion">Más antiguos</option>
+                    <option value="-fecha_creacion">Más recientes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-list-ul me-1" aria-hidden="true"></i>Docentes Registrados</span>
+        <span class="badge bg-light text-dark" id="teachers-count">Cargando...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <div class="loading-overlay" id="teachers-loading" aria-live="polite" aria-busy="true">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando docentes...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Cargando datos desde API...</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="teachers-table" role="grid" aria-label="Lista de docentes">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 60px;" aria-sort="none">ID</th>
+                            <th scope="col" data-order="last_name" aria-sort="none">Docente <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="courses_count" aria-sort="none">Cursos Asignados <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" style="width: 100px;" aria-sort="none">Estado</th>
+                            {% if user.is_superuser %}<th scope="col" style="width: 150px;">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="teachers-tbody"></tbody>
+                </table>
+            </div>
+            <div class="empty-state d-none" id="teachers-empty">
+                <i class="bi bi-person-x" aria-hidden="true"></i>
+                <h5>No hay docentes registrados</h5>
+                <p class="text-muted">No se encontraron docentes en el sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser %}
+<!-- Teacher Modal -->
+<div class="modal fade" id="teacherModal" tabindex="-1" aria-labelledby="teacherModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="teacher-form" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="teacherModalTitle">Nuevo docente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="teacher-id">
+                    <div class="mb-3">
+                        <label for="teacher-first-name" class="form-label">Nombre <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="text" class="form-control" id="teacher-first-name" name="first_name" maxlength="100" required aria-required="true" aria-describedby="teacher-first-name-help">
+                        <div id="teacher-first-name-help" class="form-text">Nombre del docente</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="teacher-last-name" class="form-label">Apellido <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="text" class="form-control" id="teacher-last-name" name="last_name" maxlength="100" required aria-required="true" aria-describedby="teacher-last-name-help">
+                        <div id="teacher-last-name-help" class="form-text">Apellido del docente</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/teachers.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'api/base.html' %}
+{% block title %}{{ skill.name }} - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h2>{{ skill.name }}</h2>
+        <p><strong>Level:</strong> {{ skill.level }}</p>
+        <h5 class="mt-3">Programmers with this skill</h5>
+        <ul>
+          {% for p in skill.programmers.all %}
+            <li><a href="{% url 'programmer_detail' p.pk %}">{{ p.fullname }}</a></li>
+          {% empty %}
+            <li class="text-muted">Ningún programador asociado.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

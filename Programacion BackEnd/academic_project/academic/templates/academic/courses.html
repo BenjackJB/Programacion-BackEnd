@@ -1,0 +1,154 @@
+{% extends 'academic/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Gestión Académica{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-row:hover { background-color: rgba(52, 152, 219, 0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>{{ page_header }}</h1>
+            <p class="text-muted mb-0">Listado de cursos con sus docentes asignados. Datos cargados desde API REST.</p>
+        </div>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-light border" id="new-course-btn" aria-label="Crear nuevo curso">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo Curso
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Ordering -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 search-ordering-row align-items-center">
+            <div class="col-12 col-md-6 search-input-wrapper">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" class="form-control form-control-sm" id="courses-search" placeholder="Buscar cursos, docentes..." aria-label="Buscar cursos" autocomplete="off">
+            </div>
+            <div class="col-12 col-md-3">
+                <select class="form-select form-select-sm ordering-select" id="courses-ordering" aria-label="Ordenar cursos">
+                    <option value="">Ordenar por...</option>
+                    <option value="name">Nombre (A-Z)</option>
+                    <option value="-name">Nombre (Z-A)</option>
+                    <option value="teacher__last_name">Docente (A-Z)</option>
+                    <option value="-teacher__last_name">Docente (Z-A)</option>
+                    <option value="students_count">Alumnos (menos primero)</option>
+                    <option value="-students_count">Alumnos (más primero)</option>
+                    <option value="fecha_creacion">Más antiguos</option>
+                    <option value="-fecha_creacion">Más recientes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-list-ul me-1" aria-hidden="true"></i>Cursos Registrados</span>
+        <span class="badge bg-light text-dark" id="courses-count">Cargando...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <div class="loading-overlay" id="courses-loading" aria-live="polite" aria-busy="true">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando cursos...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Cargando datos desde API...</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="courses-table" role="grid" aria-label="Lista de cursos">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 60px;" aria-sort="none">ID</th>
+                            <th scope="col" data-order="name" aria-sort="none">Curso <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="teacher_name" aria-sort="none">Docente Asignado <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" data-order="students_count" aria-sort="none">Alumnos Inscritos <i class="bi bi-arrow-down-up order-icon ms-1" aria-hidden="true"></i></th>
+                            <th scope="col" style="width: 100px;" aria-sort="none">Estado</th>
+                            {% if user.is_superuser %}<th scope="col" style="width: 180px;">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="courses-tbody"></tbody>
+                </table>
+            </div>
+            <div class="empty-state d-none" id="courses-empty">
+                <i class="bi bi-journal-x" aria-hidden="true"></i>
+                <h5>No hay cursos registrados</h5>
+                <p class="text-muted">No se encontraron cursos en el sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser %}
+<!-- Students Modal -->
+<div class="modal fade" id="studentsModal" tabindex="-1" aria-labelledby="studentsModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="students-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentsModalTitle">Estudiantes del curso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="students-course-id">
+                    <p class="form-label mb-2">Marca los estudiantes que deben permanecer inscritos</p>
+                    <div class="border rounded" id="course-students" aria-live="polite" role="list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Course Modal -->
+<div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="course-form" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="courseModalTitle">Nuevo curso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="course-id">
+                    <div class="mb-3">
+                        <label for="course-name" class="form-label">Nombre del curso <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="text" class="form-control" id="course-name" name="name" required aria-required="true" aria-describedby="course-name-help">
+                        <div id="course-name-help" class="form-text">Nombre descriptivo del curso</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="course-teacher" class="form-label">Docente <span class="text-danger" aria-hidden="true">*</span></label>
+                        <select class="form-select" id="course-teacher" name="teacher_id" required aria-required="true" aria-describedby="course-teacher-help">
+                            <option value="">Selecciona un docente</option>
+                        </select>
+                        <div id="course-teacher-help" class="form-text">Docente responsable del curso</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/courses.js' %}"></script>
+{% endblock %}

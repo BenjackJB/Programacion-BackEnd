@@ -1,0 +1,22 @@
+{% extends 'api/base.html' %}
+{% block title %}Skills - BackendPro{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-3">Skills</h1>
+  </div>
+  {% for s in skills %}
+  <div class="col-md-4 mb-3">
+    <div class="card card-hero p-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ s.name }}</h5>
+        <p class="mb-1"><strong>Level:</strong> {{ s.level }}</p>
+        <a href="{% url 'skill_detail' s.pk %}" class="btn btn-sm btn-primary mt-2">Ver</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><p class="text-muted">No hay skills aún.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

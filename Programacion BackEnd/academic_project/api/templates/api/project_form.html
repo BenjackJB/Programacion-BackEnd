@@ -1,0 +1,51 @@
+{% extends 'api/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h3>{{ title }}</h3>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="form-group mb-3">
+        {{ form.name.label_tag }}
+        {{ form.name }}
+        {% if form.name.errors %}
+          <small class="text-danger">{{ form.name.errors }}</small>
+        {% endif %}
+      </div>
+      <div class="form-group mb-3">
+        {{ form.description.label_tag }}
+        {{ form.description }}
+        {% if form.description.errors %}
+          <small class="text-danger">{{ form.description.errors }}</small>
+        {% endif %}
+      </div>
+      <div class="form-group mb-3">
+        {{ form.start_date.label_tag }}
+        {{ form.start_date }}
+        {% if form.start_date.errors %}
+          <small class="text-danger">{{ form.start_date.errors }}</small>
+        {% endif %}
+      </div>
+      <div class="form-group mb-3">
+        {{ form.end_date.label_tag }}
+        {{ form.end_date }}
+        {% if form.end_date.errors %}
+          <small class="text-danger">{{ form.end_date.errors }}</small>
+        {% endif %}
+      </div>
+      <div class="form-group mb-3">
+        {{ form.owner.label_tag }}
+        {{ form.owner }}
+        {% if form.owner.errors %}
+          <small class="text-danger">{{ form.owner.errors }}</small>
+        {% endif %}
+      </div>
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a href="{% url 'projects_table' %}" class="btn btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

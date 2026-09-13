@@ -1,0 +1,412 @@
+"""
+Vistas de la aplicación academic.
+
+Incluye:
+- Vistas basadas en clases (CBV) para renderizar templates HTML
+- ViewSets de DRF para endpoints API REST
+- Todas las vistas HTML usan render() y consumen la API vía fetch() en JavaScript
+
+NOTA: StudentCourse usa PK compuesta (student, course) - se maneja con lookup_url_kwarg
+"""
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+from django.shortcuts import render, redirect
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
+
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound
+
+from .models import Teacher, Course, Student, StudentCourse
+from django.db.models import Prefetch, Count, Q
+from .serializers import (
+    TeacherSerializer, CourseSerializer, StudentSerializer, StudentCourseSerializer,
+    CourseListSerializer, StudentListSerializer
+)
+from .permissions import (
+    IsSuperUserOrReadOnly, AcademicPermission,
+    CanManageTeachers, CanManageCourses, CanManageStudents, CanManageEnrollments
+)
+
+
+# =============================================================================
+# VISTAS DE AUTENTICACIÓN (HTML)
+# =============================================================================
+
+class CustomLoginView(LoginView):
+    """
+    Vista de login personalizada usando template login.html.
+    Redirige a courses después de login exitoso.
+    """
+    template_name = 'academic/login.html'
+    redirect_authenticated_user = True
+    next_page = reverse_lazy('courses')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Iniciar Sesión - Gestión Académica'
+        return context
+
+
+class CustomLogoutView(LogoutView):
+    """Vista de logout compatible con GET y renderiza una página custom."""
+    http_method_names = ['get', 'post', 'options']
+    template_name = 'academic/logout.html'
+
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        logout(request)
+        return self.get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Sesión cerrada',
+            'message': 'Has cerrado sesión correctamente.',
+            'login_url': reverse_lazy('login'),
+        })
+        return context
+
+
+# =============================================================================
+# VISTAS PRINCIPALES (HTML - TEMPLATES)
+# =============================================================================
+
+class BaseTemplateView(TemplateView):
+    """
+    Vista base pública para lectura. Requiere autenticación solo para acciones de escritura.
+    """
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'user': self.request.user,
+            'is_superuser': getattr(self.request.user, 'is_superuser', False),
+        })
+        return context
+
+
+class CoursesView(BaseTemplateView):
+    """
+    Vista para listado de cursos (courses.html).
+    Renderiza template y pasa contexto inicial.
+    Los datos se cargan vía JavaScript fetch() desde /api/courses/
+    """
+    template_name = 'academic/courses.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Listado de Cursos',
+            'page_header': 'Cursos y Docentes Asignados',
+            'api_endpoint': '/api/courses/',
+        })
+        return context
+
+
+class TeachersView(BaseTemplateView):
+    """Vista para listado y gestión de docentes."""
+    template_name = 'academic/teachers.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Listado de Docentes',
+            'page_header': 'Docentes',
+            'api_endpoint': '/api/teachers/',
+        })
+        return context
+
+
+class StudentsView(BaseTemplateView):
+    """
+    Vista para listado de estudiantes (students.html).
+    Renderiza template y pasa contexto inicial.
+    Los datos se cargan vía JavaScript fetch() desde /api/students/
+    """
+    template_name = 'academic/students.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Listado de Estudiantes',
+            'page_header': 'Estudiantes Inscritos',
+            'api_endpoint': '/api/students/',
+        })
+        return context
+
+
+class HomeView(BaseTemplateView):
+    """
+    Vista de inicio (dashboard) - redirige a courses.
+    Evita error 404 en ruta raíz "/".
+    """
+    def get(self, request, *args, **kwargs):
+        # Si ya está en /courses/, no redirigir para evitar loop
+        if request.path == '/courses/':
+            return render(request, 'academic/courses.html', self.get_context_data())
+        return redirect('courses')
+
+
+# =============================================================================
+# VIEWSETS API REST (DRF)
+# =============================================================================
+
+class TeacherViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Docentes.
+    - Usuarios sin autenticar: lectura permitida.
+    - Superusuario: puede escribir y gestionar.
+    """
+    queryset = Teacher.all_objects.all()
+    serializer_class = TeacherSerializer
+    permission_classes = [IsSuperUserOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['first_name', 'last_name']
+    ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
+    ordering = ['last_name', 'first_name']
+
+    def get_queryset(self):
+        """Listado solo muestra activos. Restore accede a todos."""
+        qs = Teacher.objects.annotate(
+            courses_count=Count('courses', filter=Q(courses__activo=True))
+        )
+        if getattr(self, 'action', None) == 'restore':
+            return Teacher.all_objects.annotate(
+                courses_count=Count('courses', filter=Q(courses__activo=True))
+            )
+        return qs
+
+    def perform_create(self, serializer):
+        """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
+        serializer.save()
+
+    def get_object(self):
+        """Permite recuperar un docente inactivo para PATCH/PUT/DELETE y restauración."""
+        queryset = Teacher.all_objects.all()
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Teacher.DoesNotExist:
+            raise NotFound('Docente no encontrado.')
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def perform_destroy(self, instance):
+        """Borrado lógico en lugar de eliminación física."""
+        instance.soft_delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[CanManageTeachers])
+    def restore(self, request, pk=None):
+        """Restaura un docente desactivado."""
+        teacher = self.get_object()
+        teacher.restore()
+        serializer = self.get_serializer(teacher)
+        return Response(serializer.data)
+
+
+class CourseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Cursos.
+    Lectura pública; escritura solo para superusuarios.
+    """
+    queryset = Course.all_objects.select_related('teacher').all()
+    permission_classes = [IsSuperUserOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'teacher__first_name', 'teacher__last_name']
+    ordering_fields = ['name', 'fecha_creacion', 'students_count', 'teacher__last_name', 'teacher__first_name']
+    ordering = ['name']
+
+    def perform_create(self, serializer):
+        """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
+        serializer.save()
+
+    def get_serializer_class(self):
+        """Usa serializer optimizado para listado."""
+        if self.action == 'list':
+            return CourseListSerializer
+        return CourseSerializer
+
+    def get_queryset(self):
+        """Listado solo muestra activos. Restore accede a todos."""
+        student_courses = Prefetch(
+            'student_courses',
+            queryset=StudentCourse.objects.select_related('student').filter(student__activo=True)
+        )
+        students_count_annotation = Count(
+            'student_courses',
+            filter=Q(student_courses__activo=True, student_courses__student__activo=True)
+        )
+        base_qs = Course.objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
+        if getattr(self, 'action', None) == 'restore':
+            return Course.all_objects.select_related('teacher').prefetch_related(student_courses).annotate(students_count=students_count_annotation)
+        return base_qs
+
+    def get_object(self):
+        """Permite recuperar un curso inactivo para PATCH/PUT/DELETE y restauración."""
+        queryset = Course.all_objects.select_related('teacher').all()
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Course.DoesNotExist:
+            raise NotFound('Curso no encontrado.')
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def perform_destroy(self, instance):
+        """Borrado lógico en lugar de eliminación física."""
+        instance.soft_delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[CanManageCourses])
+    def restore(self, request, pk=None):
+        """Restaura un curso desactivado."""
+        course = self.get_object()
+        course.restore()
+        serializer = self.get_serializer(course)
+        return Response(serializer.data)
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Estudiantes.
+    - Usuarios sin autenticar: lectura permitida.
+    - Superusuario: puede escribir y gestionar.
+    """
+    queryset = Student.all_objects.all()
+    serializer_class = StudentSerializer
+    permission_classes = [IsSuperUserOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['first_name', 'last_name']
+    ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
+    ordering = ['last_name', 'first_name']
+
+    def perform_create(self, serializer):
+        """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
+        serializer.save()
+
+    def get_queryset(self):
+        """Listado solo muestra activos. Restore accede a todos."""
+        courses_count_annotation = Count(
+            'student_courses',
+            filter=Q(student_courses__activo=True, student_courses__course__activo=True)
+        )
+        if getattr(self, 'action', None) == 'restore':
+            return Student.all_objects.annotate(courses_count=courses_count_annotation)
+        return Student.objects.annotate(courses_count=courses_count_annotation)
+
+    def get_object(self):
+        """Permite recuperar un estudiante inactivo para PATCH/PUT/DELETE y restauración."""
+        queryset = Student.all_objects.all()
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Student.DoesNotExist:
+            raise NotFound('Estudiante no encontrado.')
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_serializer_class(self):
+        """Usa serializer optimizado para listado."""
+        if self.action == 'list':
+            return StudentListSerializer
+        return StudentSerializer
+
+    def perform_destroy(self, instance):
+        """Borrado lógico en lugar de eliminación física."""
+        instance.soft_delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[CanManageStudents])
+    def restore(self, request, pk=None):
+        """Restaura un estudiante desactivado."""
+        student = self.get_object()
+        student.restore()
+        serializer = self.get_serializer(student)
+        return Response(serializer.data)
+
+
+class StudentCourseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Inscripciones.
+    - Usuarios sin autenticar: lectura permitida.
+    - Superusuario: puede escribir y gestionar.
+    """
+    queryset = StudentCourse.all_objects.select_related('student', 'course').all()
+    serializer_class = StudentCourseSerializer
+    permission_classes = [IsSuperUserOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['student__first_name', 'student__last_name', 'course__name']
+    ordering_fields = ['fecha_creacion']
+    ordering = ['-fecha_creacion']
+
+    def perform_create(self, serializer):
+        """Usa el manager por defecto para crear (incluye activo=True por defecto)."""
+        serializer.save()
+
+    # Configuración para PK compuesta
+    lookup_fields = ['student_id', 'course_id']
+    lookup_url_kwargs = ['student_id', 'course_id']
+
+    def get_object(self):
+        """
+        Obtiene objeto por PK compuesta (student_id, course_id).
+        Usa all_objects para permitir restore de registros inactivos.
+        """
+        queryset = StudentCourse.all_objects.select_related('student', 'course').all()
+        student_id = self.kwargs.get('student_id')
+        course_id = self.kwargs.get('course_id')
+        if not student_id or not course_id:
+            pk = self.kwargs.get('pk')
+            if pk and '_' in str(pk):
+                student_id, course_id = pk.split('_', 1)
+        try:
+            obj = queryset.get(student_id=student_id, course_id=course_id)
+        except StudentCourse.DoesNotExist:
+            raise NotFound('Inscripción no encontrada.')
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_queryset(self):
+        """Listado solo muestra activas. Restore accede a todas."""
+        if getattr(self, 'action', None) == 'restore':
+            queryset = StudentCourse.all_objects.select_related('student', 'course').all()
+        else:
+            queryset = StudentCourse.objects.select_related('student', 'course').all()
+
+        student_id = self.request.query_params.get('student_id')
+        course_id = self.request.query_params.get('course_id')
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+        if course_id:
+            queryset = queryset.filter(course_id=course_id)
+        return queryset
+
+    def perform_destroy(self, instance):
+        """Borrado lógico en lugar de eliminación física."""
+        instance.soft_delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[CanManageEnrollments])
+    def restore(self, request, student_id=None, course_id=None):
+        """Restaura una inscripción desactivada."""
+        enrollment = self.get_object()
+        enrollment.restore()
+        serializer = self.get_serializer(enrollment)
+        return Response(serializer.data)
