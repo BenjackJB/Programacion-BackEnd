@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env
+
+# Django
+db.sqlite3
+staticfiles/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.rar
+*.zip
+*.tar.gz
+
+# Scripts sueltos (no deben ir en el repo)
+cleanup_*.py
+run_test_*.py
+debug_*.py
+seed_data.py
+verify_cleanup.py
+prompts.md
