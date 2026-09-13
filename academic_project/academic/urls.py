@@ -10,14 +10,26 @@ Incluye:
 
 from django.urls import path, include
 from django.views.generic import RedirectView
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter, APIRootView
 from . import views
+from .permissions import IsSuperUser
 
 # =============================================================================
 # ROUTER DRF PARA API REST
+# La raíz /api/ (índice navegable que lista todos los endpoints) solo es
+# visible para superusuarios; el resto de endpoints siguen su propio permiso.
 # =============================================================================
 
-router = DefaultRouter()
+class SuperUserOnlyAPIRootView(APIRootView):
+    """Índice de la API: solo superusuarios pueden ver la raíz de /api/."""
+    permission_classes = [IsSuperUser]
+
+
+class AcademicRouter(DefaultRouter):
+    APIRootView = SuperUserOnlyAPIRootView
+
+
+router = AcademicRouter()
 router.register(r'teachers', views.TeacherViewSet, basename='teacher')
 router.register(r'courses', views.CourseViewSet, basename='course')
 router.register(r'students', views.StudentViewSet, basename='student')

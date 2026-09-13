@@ -10,7 +10,6 @@
 
     let coursesTable;
     let courseFormHandler;
-    let studentsFormHandler;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -238,18 +237,19 @@
     }
 
     // Students Modal for Course
+    // El envío real se maneja en el listener global del document (abajo),
+    // porque las inscripciones se sincronizan por checkboxes y no por un formulario.
     function initStudentsModal() {
-        studentsFormHandler = new FormHandler({
-            formId: 'students-form',
-            modalId: 'studentsModal',
-            apiEndpoint: '/api/enrollments/',
-            fields: [],
-            onSuccess: () => {
-                modalManager.hide('studentsModal');
-                coursesTable.load();
-            },
+        const form = document.getElementById('students-form');
+        if (!form) return;
+        const modalEl = document.getElementById('studentsModal');
+        if (modalEl) modalEl.addEventListener('hidden.bs.modal', () => {
+            const studentsList = document.getElementById('course-students');
+            if (studentsList) {
+                delete studentsList.dataset.enrollments;
+                delete studentsList.dataset.courseId;
+            }
         });
-        studentsFormHandler.bind();
     }
 
     async function openStudentsModal(courseId, courseName) {
@@ -344,11 +344,18 @@
                 const existing = enrollments[checkbox.value];
                 if (existing?.activo) continue;
 
-                const url = existing ? `/api/enrollments/${checkbox.value}/${courseId}/` : '/api/enrollments/';
-                await apiFetch(url, {
-                    method: existing ? 'PATCH' : 'POST',
-                    body: JSON.stringify(existing ? { activo: true } : { student_id: checkbox.value, course_id: courseId }),
-                });
+                if (existing) {
+                    // Inscripción ya existe pero estaba inactiva: se restaura.
+                    await apiFetch(`/api/enrollments/${checkbox.value}/${courseId}/`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ activo: true }),
+                    });
+                } else {
+                    await apiFetch('/api/enrollments/', {
+                        method: 'POST',
+                        body: JSON.stringify({ student_id: checkbox.value, course_id: courseId }),
+                    });
+                }
             }
 
             for (const [studentId] of removedStudents) {

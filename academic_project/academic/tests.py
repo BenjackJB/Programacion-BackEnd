@@ -547,6 +547,35 @@ class PermissionsTest(APITestCase):
         admin_queryset = admin.site._registry[Course].get_queryset(request)
         self.assertIn(inactive_course, admin_queryset)
 
+    def test_api_root_only_superusers(self):
+        """La raíz /api/ (índice navegable) solo es accesible para superusuarios."""
+        self.client.force_authenticate(user=None)
+        response = self.client.get('/api/')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+        self.client.force_authenticate(user=self.normal_user)
+        response = self.client.get('/api/')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+        self.client.force_authenticate(user=self.superuser)
+        response = self.client.get('/api/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_ui_session_superuser_can_create_course(self):
+        """Regresión: la UI usa sesión. Un superusuario logueado por sesión debe
+        poder crear cursos (antes 403 por configurar solo autenticación JWT)."""
+        self.client.force_login(self.superuser)
+        data = {'name': 'Curso de la UI', 'teacher_id': self.teacher.pk, 'jornada': 'D'}
+        response = self.client.post('/api/courses/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_ui_session_normal_user_cannot_write(self):
+        """Un usuario normal logueado por sesión NO puede escribir vía API."""
+        self.client.force_login(self.normal_user)
+        data = {'name': 'Curso sin permiso', 'teacher_id': self.teacher.pk, 'jornada': 'D'}
+        response = self.client.post('/api/courses/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
 # =============================================================================
 # TESTS DE BORRADO LÓGICO INTEGRADO
