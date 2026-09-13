@@ -618,6 +618,44 @@ class SoftDeleteIntegrationTest(TestCase):
 
 
 # =============================================================================
+# TESTS DEL ESQUEMA COREAPI (DOCUMENTACIÓN PARALELA)
+# =============================================================================
+
+class CoreAPISchemaTest(TestCase):
+    """El esquema CoreAPI (CoreJSON) debe servirse y ser legible por coreapi."""
+
+    def test_coreapi_schema_endpoint_returns_corejson(self):
+        from coreapi.codecs import CoreJSONCodec
+
+        url = reverse('api-coreapi-schema')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/vnd.coreapi+json', response['Content-Type'])
+
+        # El contenido debe decodificarse como Documento CoreAPI.
+        doc = CoreJSONCodec().decode(response.content)
+        self.assertEqual(doc.title, 'API Académica - Esquema CoreAPI')
+        self.assertIn('token', list(doc.keys()))
+        self.assertIn('teachers', list(doc.keys()))
+        self.assertIn('courses', list(doc.keys()))
+        self.assertIn('students', list(doc.keys()))
+        self.assertIn('enrollments', list(doc.keys()))
+
+    def test_coreapi_schema_links_are_well_formed(self):
+        from coreapi.codecs import CoreJSONCodec
+
+        url = reverse('api-coreapi-schema')
+        doc = CoreJSONCodec().decode(self.client.get(url).content)
+
+        self.assertEqual(doc['teachers']['list'].action, 'get')
+        self.assertEqual(doc['teachers']['create'].url, '/api/teachers/')
+        self.assertEqual(doc['enrollments']['create'].fields[0].name, 'student_id')
+        self.assertEqual(doc['enrollments']['restore'].action, 'post')
+        self.assertEqual(doc['token']['obtain'].url, '/api/token/')
+
+
+# =============================================================================
 # HELPER PARA EJECUTAR TESTS
 # =============================================================================
 

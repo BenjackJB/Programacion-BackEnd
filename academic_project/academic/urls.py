@@ -13,6 +13,7 @@ from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter, APIRootView
 from . import views
 from .permissions import IsSuperUser
+from .coreapi_schema import coreapi_schema_view
 
 # =============================================================================
 # ROUTER DRF PARA API REST
@@ -71,6 +72,9 @@ urlpatterns = [
         views.StudentCourseViewSet.as_view({'post': 'restore'}),
         name='enrollment-restore-composite'
     ),
+
+    # Esquema CoreAPI (formato CoreJSON) - documentación paralela a /docs/ y /api/schema/
+    path('api/coreapi/', coreapi_schema_view, name='api-coreapi-schema'),
 
     # Catch-all: cualquier ruta desconocida se redirige a courses (evita 404).
     path('<path:unknown_path>', RedirectView.as_view(url='/courses/', permanent=False)),
