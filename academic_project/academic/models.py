@@ -5,6 +5,7 @@ Entidades según modelo ER:
 - Teacher (Docentes)
 - Course (Asignaturas)
 - Student (Estudiantes)
+- Asignatura (Asignaturas - entidad propia)
 - StudentCourse (Inscripciones - tabla intermedia Many-to-Many con PK compuesta)
 
 IMPORTANTE: Borrado lógico (soft delete) - NO se eliminan registros físicamente.
@@ -188,6 +189,40 @@ class Student(BaseModel):
     def full_name(self):
         """Retorna nombre completo del estudiante."""
         return f"{self.first_name} {self.last_name}"
+
+
+# =============================================================================
+# MODELO ASIGNATURA
+# =============================================================================
+
+class Asignatura(BaseModel):
+    TIPO_CHOICES = [
+        ('O', 'Obligatoria'),
+        ('E', 'Electiva'),
+    ]
+    NIVEL_CHOICES = [
+        ('1', 'Primer año'),
+        ('2', 'Segundo año'),
+        ('3', 'Tercer año'),
+        ('4', 'Cuarto año'),
+        ('5', 'Quinto año'),
+    ]
+
+    codigo = models.CharField(max_length=20, blank=True, verbose_name='Código')
+    nombre = models.CharField(max_length=120, verbose_name='Nombre')
+    descripcion = models.TextField(blank=True, verbose_name='Descripción')
+    creditos = models.PositiveSmallIntegerField(default=0, verbose_name='Créditos')
+    tipo = models.CharField(max_length=1, choices=TIPO_CHOICES, default='O', verbose_name='Tipo')
+    nivel = models.CharField(max_length=1, choices=NIVEL_CHOICES, default='1', verbose_name='Nivel')
+
+    class Meta:
+        db_table = 'asignatura'
+        verbose_name = 'Asignatura'
+        verbose_name_plural = 'Asignaturas'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"
 
 
 # =============================================================================

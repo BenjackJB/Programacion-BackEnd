@@ -34,6 +34,7 @@ router = AcademicRouter()
 router.register(r'teachers', views.TeacherViewSet, basename='teacher')
 router.register(r'courses', views.CourseViewSet, basename='course')
 router.register(r'students', views.StudentViewSet, basename='student')
+router.register(r'asignaturas', views.AsignaturaViewSet, basename='asignatura')
 router.register(r'enrollments', views.StudentCourseViewSet, basename='enrollment')
 
 # =============================================================================

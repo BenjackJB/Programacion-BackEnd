@@ -8,7 +8,7 @@ Registra los modelos con opciones personalizadas:
 """
 
 from django.contrib import admin
-from .models import Teacher, Course, Student, StudentCourse
+from .models import Teacher, Course, Student, StudentCourse, Asignatura
 
 
 # =============================================================================
@@ -119,6 +119,20 @@ class StudentAdmin(SoftDeleteAdmin):
     def courses_count(self, obj):
         return obj.student_courses.filter(activo=True, course__activo=True).count()
     courses_count.short_description = 'Cursos'
+
+
+# =============================================================================
+# ASIGNATURA ADMIN
+# =============================================================================
+
+@admin.register(Asignatura)
+class AsignaturaAdmin(SoftDeleteAdmin):
+    list_display = ('id', 'codigo', 'nombre', 'tipo', 'nivel', 'creditos', 'activo', 'fecha_creacion')
+    list_display_links = ('id', 'nombre')
+    list_filter = ('activo', 'tipo', 'nivel', 'fecha_creacion')
+    search_fields = ('nombre', 'codigo')
+    ordering = ('nombre',)
+    list_per_page = 25
 
 
 # =============================================================================

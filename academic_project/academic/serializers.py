@@ -8,7 +8,7 @@ NOTA: StudentCourse usa PK compuesta (student, course) sin campo 'id' propio.
 """
 
 from rest_framework import serializers
-from .models import Teacher, Course, Student, StudentCourse
+from .models import Teacher, Course, Student, StudentCourse, Asignatura
 
 
 # =============================================================================
@@ -116,6 +116,31 @@ class StudentBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'full_name', 'sexo', 'jornada', 'activo']
+
+
+# =============================================================================
+# SERIALIZER ASIGNATURA
+# =============================================================================
+
+class AsignaturaSerializer(serializers.ModelSerializer):
+    tipo = serializers.ChoiceField(
+        required=False,
+        default='O',
+        choices=Asignatura.TIPO_CHOICES,
+        help_text='Tipo: O=Obligatoria, E=Electiva'
+    )
+    nivel = serializers.ChoiceField(
+        required=False,
+        default='1',
+        choices=Asignatura.NIVEL_CHOICES,
+        help_text='Nivel: 1=Primer año ... 5=Quinto año'
+    )
+    activo = serializers.BooleanField(required=False, default=True)
+
+    class Meta:
+        model = Asignatura
+        fields = ['id', 'codigo', 'nombre', 'descripcion', 'creditos', 'tipo', 'nivel', 'activo', 'fecha_creacion']
+        read_only_fields = ['id', 'fecha_creacion']
 
 
 # =============================================================================

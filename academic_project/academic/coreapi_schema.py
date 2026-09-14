@@ -118,6 +118,15 @@ def _build_schema():
         _field('course_id', description='ID del curso'),
         _field('activo', required=False, description='Activo (borrado lógico)'),
     ]
+    asignatura_fields = [
+        _field('codigo', required=False, description='Código de la asignatura'),
+        _field('nombre', description='Nombre de la asignatura'),
+        _field('descripcion', required=False, description='Descripción'),
+        _field('creditos', required=False, description='Créditos'),
+        _field('tipo', required=False, description='O=Obligatoria, E=Electiva'),
+        _field('nivel', required=False, description='1..5 (año)'),
+        _field('activo', required=False, description='Activo (borrado lógico)'),
+    ]
     enrollment_detail = '/api/enrollments/{student_id}/{course_id}/'
 
     return Document(
@@ -125,14 +134,14 @@ def _build_schema():
         title='API Académica - Esquema CoreAPI',
         description=(
             'Documentación paralela de la API REST (drf-spectacular sigue en /api/schema/ y /docs/). '
-            'Token JWT: solo superusuarios. La raiz /api/ requiere superusuario; '
-            'las lecturas son públicas y las escrituras reservadas a superusuarios.'
+            'Asignatura: lectura pública y escritura con JWT. Cursos, Docentes, Estudiantes e '
+            'Inscripciones: CRUD completo requiere JWT. La raiz /api/ requiere superusuario.'
         ),
         content={
             'token': {
                 'obtain': Link(
                     url='/api/token/', action='post',
-                    description='Obtiene un par de tokens JWT (solo superusuarios).',
+                    description='Obtiene un par de tokens JWT (cualquier usuario con credenciales válidas).',
                     fields=[_field('username'), _field('password')],
                 ),
                 'refresh': Link(
@@ -165,6 +174,11 @@ def _build_schema():
                 'students', student_fields,
                 read_fields=['id', 'first_name', 'last_name', 'full_name', 'sexo', 'jornada', 'courses_count', 'activo', 'fecha_creacion'],
                 filters=['activo', 'sexo', 'jornada', 'search', 'ordering', 'page'],
+            ),
+            'asignaturas': _resource(
+                'asignaturas', asignatura_fields,
+                read_fields=['id', 'codigo', 'nombre', 'descripcion', 'creditos', 'tipo', 'nivel', 'activo', 'fecha_creacion'],
+                filters=['activo', 'tipo', 'nivel', 'search', 'ordering', 'page'],
             ),
             'enrollments': {
                 'list': Link(

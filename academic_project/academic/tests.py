@@ -15,7 +15,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
-from .models import Teacher, Course, Student, StudentCourse
+from .models import Teacher, Course, Student, StudentCourse, Asignatura
 
 
 # =============================================================================
@@ -379,6 +379,58 @@ class StudentCourseAPITest(APITestCase):
 
 
 # =============================================================================
+# TESTS DE API ENDPOINTS - ASIGNATURA
+# =============================================================================
+
+class AsignaturaAPITest(APITestCase):
+    """Pruebas para endpoints API de Asignatura (lectura pública, escritura JWT)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('userapi', 'userapi@test.com', 'password')
+        self.asignatura = Asignatura.objects.create(
+            codigo='PRO101', nombre='Programacion I', tipo='O', nivel='2', creditos=5
+        )
+
+    def test_anonymous_can_read_asignaturas(self):
+        """Registros de Asignatura son de libre acceso para lectura (sin autenticación)."""
+        url = reverse('asignatura-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('Programacion I', [item['nombre'] for item in response.data['results']])
+
+    def test_anonymous_can_read_asignatura_detail(self):
+        """Detalle de asignatura también es lectura libre."""
+        url = reverse('asignatura-detail', kwargs={'pk': self.asignatura.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['nombre'], 'Programacion I')
+
+    def test_anonymous_cannot_create_asignatura(self):
+        """Crear asignatura requiere autenticación (401 sin JWT)."""
+        url = reverse('asignatura-list')
+        data = {'codigo': 'NUE1', 'nombre': 'Nueva', 'tipo': 'O', 'nivel': '1'}
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_authenticated_can_create_asignatura(self):
+        """Usuario autenticado (JWT o sesión) puede crear asignatura (201)."""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('asignatura-list')
+        data = {'codigo': 'NUE1', 'nombre': 'Nueva', 'tipo': 'E', 'nivel': '4', 'creditos': 3}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Asignatura.objects.count(), 2)
+
+    def test_choices_validated(self):
+        """El uso de choices (tipo/nivel) se valida: un valor inválido da 400."""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('asignatura-list')
+        data = {'codigo': 'X1', 'nombre': 'Invalida', 'tipo': 'Z', 'nivel': '9'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+# =============================================================================
 # TESTS DE VISTAS HTML (TEMPLATES)
 # =============================================================================
 
@@ -475,35 +527,36 @@ class PermissionsTest(APITestCase):
         response = self.client.post('/api/teachers/', {'first_name': 'New', 'last_name': 'Teacher'})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_normal_user_read_only(self):
-        """Usuario normal solo lectura."""
+    def test_authenticated_user_full_access(self):
+        """Cualquier usuario autenticado (JWT o sesión) puede hacer CRUD (GET y POST)."""
         self.client.force_authenticate(user=self.normal_user)
         # GET permitido
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # POST denegado
+        # POST permitido (requisito: "el resto debe pedir JWT (crud)")
         response = self.client.post('/api/teachers/', {'first_name': 'New', 'last_name': 'Teacher'})
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_unauthenticated_read_only_access(self):
-        """Sin autenticar: solo lectura permitida en la API."""
+    def test_unauthenticated_denied(self):
+        """Sin autenticar: la API exige JWT (401)."""
         response = self.client.get('/api/teachers/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unauthenticated_cannot_write(self):
         """Sin autenticar: no puede crear ni modificar registros (401 = debe autenticarse)."""
         response = self.client.post('/api/teachers/', {'first_name': 'New', 'last_name': 'Teacher'})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_authenticated_non_superuser_cannot_write(self):
-        """Autenticado pero no superusuario: escritura denegada (403)."""
+    def test_authenticated_non_superuser_can_write(self):
+        """Autenticado (no superusuario) puede escribir: el CRUD pide JWT, no superusuario."""
         self.client.force_authenticate(user=self.normal_user)
         data = {'first_name': 'New', 'last_name': 'Teacher', 'sexo': 'M'}
         response = self.client.post('/api/teachers/', data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_superuser_sees_inactive_records_but_anonymous_does_not(self):
-        """El superusuario ve registros inactivos (para restaurarlos); el resto no."""
+    def test_superuser_sees_inactive_records_but_normal_user_does_not(self):
+        """El superusuario ve registros inactivos (para restaurarlos); los
+        usuarios autenticados normales no los ven; los anónimos no acceden."""
         inactive_teacher = Teacher.objects.create(first_name='Inactivo', last_name='Docente')
         inactive_teacher.soft_delete()
 
@@ -513,11 +566,16 @@ class PermissionsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
 
-        # Anónimo NO los ve
-        self.client.force_authenticate(user=None)
+        # Usuario normal autenticado NO los ve
+        self.client.force_authenticate(user=self.normal_user)
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
+
+        # Anónimo no puede consultar (requiere JWT)
+        self.client.force_authenticate(user=None)
+        response = self.client.get('/api/teachers/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_normal_user_cannot_retrieve_inactive_detail(self):
         """Un usuario no superusuario no puede acceder al detalle de un registro inactivo (404)."""
@@ -569,12 +627,40 @@ class PermissionsTest(APITestCase):
         response = self.client.post('/api/courses/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_ui_session_normal_user_cannot_write(self):
-        """Un usuario normal logueado por sesión NO puede escribir vía API."""
+    def test_ui_session_normal_user_can_write(self):
+        """Un usuario normal logueado por sesión SÍ puede escribir vía API
+        (el CRUD pide autenticación, no superusuario)."""
         self.client.force_login(self.normal_user)
-        data = {'name': 'Curso sin permiso', 'teacher_id': self.teacher.pk, 'jornada': 'D'}
+        data = {'name': 'Curso con sesión', 'teacher_id': self.teacher.pk, 'jornada': 'D'}
         response = self.client.post('/api/courses/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_jwt_token_usable_for_any_user(self):
+        """El login asociado a JWT: cualquier usuario con credenciales válidas
+        obtiene tokens, y con ellos puede hacer CRUD en la API."""
+        # Obtener token como usuario normal
+        response = self.client.post('/api/token/', {
+            'username': 'student', 'password': 'password'
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        access = response.data['access']
+        self.assertTrue(access)
+
+        # Usar el token JWT para CRUD en cursos
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+        response = self.client.get('/api/courses/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post('/api/courses/', {
+            'name': 'Curso con JWT', 'teacher_id': self.teacher.pk, 'jornada': 'D'
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_docs_schema_public(self):
+        """La documentación (drf-spectacular) sigue accesible sin autenticación."""
+        response = self.client.get('/api/schema/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get('/docs/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 # =============================================================================
@@ -640,6 +726,7 @@ class CoreAPISchemaTest(TestCase):
         self.assertIn('teachers', list(doc.keys()))
         self.assertIn('courses', list(doc.keys()))
         self.assertIn('students', list(doc.keys()))
+        self.assertIn('asignaturas', list(doc.keys()))
         self.assertIn('enrollments', list(doc.keys()))
 
     def test_coreapi_schema_links_are_well_formed(self):

@@ -20,17 +20,18 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import reverse_lazy
 
 from rest_framework import viewsets, filters
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Teacher, Course, Student, StudentCourse
+from .models import Teacher, Course, Student, StudentCourse, Asignatura
 from django.db.models import Prefetch, Count, Q
 from .serializers import (
     TeacherSerializer, CourseSerializer, StudentSerializer, StudentCourseSerializer,
+    AsignaturaSerializer,
 )
-from .permissions import IsSuperUserOrReadOnly
 
 
 # =============================================================================
@@ -159,7 +160,7 @@ class HomeView(BaseTemplateView):
 class TeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.all_objects.all()
     serializer_class = TeacherSerializer
-    permission_classes = [IsSuperUserOrReadOnly]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'sexo']
     search_fields = ['first_name', 'last_name']
@@ -189,7 +190,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def restore(self, request, pk=None):
         """Restaura un docente desactivado."""
         teacher = self.get_object()
@@ -201,7 +202,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.all_objects.select_related('teacher').all()
     serializer_class = CourseSerializer
-    permission_classes = [IsSuperUserOrReadOnly]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'jornada', 'teacher']
     search_fields = ['name', 'teacher__first_name', 'teacher__last_name']
@@ -242,7 +243,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def restore(self, request, pk=None):
         """Restaura un curso desactivado."""
         course = self.get_object()
@@ -254,7 +255,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.all_objects.all()
     serializer_class = StudentSerializer
-    permission_classes = [IsSuperUserOrReadOnly]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'sexo', 'jornada']
     search_fields = ['first_name', 'last_name']
@@ -287,7 +288,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def restore(self, request, pk=None):
         """Restaura un estudiante desactivado."""
         student = self.get_object()
@@ -299,7 +300,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 class StudentCourseViewSet(viewsets.ModelViewSet):
     queryset = StudentCourse.all_objects.select_related('student', 'course').all()
     serializer_class = StudentCourseSerializer
-    permission_classes = [IsSuperUserOrReadOnly]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'student', 'course']
     search_fields = ['student__first_name', 'student__last_name', 'course__name']
@@ -345,10 +346,56 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
         """Borrado lógico en lugar de eliminación física."""
         instance.soft_delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsSuperUserOrReadOnly])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def restore(self, request, student_id=None, course_id=None):
         """Restaura una inscripción desactivada."""
         enrollment = self.get_object()
         enrollment.restore()
         serializer = self.get_serializer(enrollment)
+        return Response(serializer.data)
+
+
+# =============================================================================
+# VIEWSET ASIGNATURA (LIBRE ACCESO: LECTURA PÚBLICA, ESCRITURA CON JWT)
+# =============================================================================
+
+class AsignaturaViewSet(viewsets.ModelViewSet):
+    queryset = Asignatura.all_objects.all()
+    serializer_class = AsignaturaSerializer
+    # Lectura pública para cualquiera; crear/editar/eliminar requiere autenticación (JWT o sesión).
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['activo', 'tipo', 'nivel']
+    search_fields = ['nombre', 'codigo']
+    ordering_fields = ['nombre', 'codigo', 'creditos', 'fecha_creacion']
+    ordering = ['nombre']
+
+    def get_queryset(self):
+        """Superusuarios ven todas (activas e inactivas); el resto solo activas."""
+        if self.request.user.is_superuser:
+            return Asignatura.all_objects.all()
+        return Asignatura.objects.all()
+
+    def get_object(self):
+        """Usa el queryset filtrado por rol (inactivas solo para superusuarios)."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Asignatura.DoesNotExist:
+            raise NotFound('Asignatura no encontrada.')
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def perform_destroy(self, instance):
+        """Borrado lógico en lugar de eliminación física."""
+        instance.soft_delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def restore(self, request, pk=None):
+        """Restaura una asignatura desactivada."""
+        asignatura = self.get_object()
+        asignatura.restore()
+        serializer = self.get_serializer(asignatura)
         return Response(serializer.data)

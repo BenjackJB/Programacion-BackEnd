@@ -5,11 +5,11 @@ Uso: python manage.py seed_data
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from academic.models import Teacher, Course, Student, StudentCourse
+from academic.models import Teacher, Course, Student, StudentCourse, Asignatura
 
 
 class Command(BaseCommand):
-    help = 'Pobla la base de datos con datos de prueba (docentes, cursos, estudiantes, inscripciones)'
+    help = 'Pobla la base de datos con datos de prueba (docentes, cursos, estudiantes, asignaturas, inscripciones)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -27,6 +27,7 @@ class Command(BaseCommand):
             Student.all_objects.all().delete()
             Course.all_objects.all().delete()
             Teacher.all_objects.all().delete()
+            Asignatura.all_objects.all().delete()
 
         # Crear superusuario si no existe
         if not User.objects.filter(username='admin').exists():
@@ -41,6 +42,13 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Usuario creado: profe / 123456'))
         else:
             self.stdout.write('Usuario "profe" ya existe.')
+
+        # Crear usuario normal (con JWT puede hacer CRUD; no ve inactivos)
+        if not User.objects.filter(username='alumno').exists():
+            User.objects.create_user('alumno', 'alumno@example.com', 'secret')
+            self.stdout.write(self.style.SUCCESS('Usuario creado: alumno / secret'))
+        else:
+            self.stdout.write('Usuario "alumno" ya existe.')
 
         # Crear docentes
         docentes_data = [
@@ -124,6 +132,32 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'  Estudiante creado: {student.first_name} {student.last_name} ({student.get_sexo_display()})')
 
+        # Crear asignaturas (lectura pública; CRUD con JWT)
+        asignaturas_data = [
+            {'codigo': 'MAT101', 'nombre': 'Algebra', 'tipo': 'O', 'nivel': '1', 'creditos': 4},
+            {'codigo': 'MAT102', 'nombre': 'Calculo I', 'tipo': 'O', 'nivel': '1', 'creditos': 4},
+            {'codigo': 'FIS101', 'nombre': 'Fisica General', 'tipo': 'O', 'nivel': '1', 'creditos': 4},
+            {'codigo': 'PRO101', 'nombre': 'Programacion I', 'tipo': 'O', 'nivel': '2', 'creditos': 5},
+            {'codigo': 'PRO102', 'nombre': 'Programacion II', 'tipo': 'O', 'nivel': '2', 'creditos': 5},
+            {'codigo': 'BASE02', 'nombre': 'Base de Datos', 'tipo': 'O', 'nivel': '2', 'creditos': 4},
+            {'codigo': 'RED101', 'nombre': 'Redes de Computadoras', 'tipo': 'O', 'nivel': '3', 'creditos': 4},
+            {'codigo': 'ING301', 'nombre': 'Ingenieria de Software', 'tipo': 'O', 'nivel': '3', 'creditos': 4},
+            {'codigo': 'IA401', 'nombre': 'Inteligencia Artificial', 'tipo': 'E', 'nivel': '4', 'creditos': 3},
+            {'codigo': 'SOP301', 'nombre': 'Sistemas Operativos', 'tipo': 'O', 'nivel': '3', 'creditos': 4},
+        ]
+        for data in asignaturas_data:
+            asignatura, created = Asignatura.objects.get_or_create(
+                codigo=data['codigo'],
+                defaults={
+                    'nombre': data['nombre'],
+                    'tipo': data['tipo'],
+                    'nivel': data['nivel'],
+                    'creditos': data['creditos'],
+                }
+            )
+            if created:
+                self.stdout.write(f'  Asignatura creada: {asignatura.nombre} ({asignatura.get_tipo_display()})')
+
         # Crear inscripciones
         inscripciones_data = [
             (0, [0, 2, 4]),
@@ -163,7 +197,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  - {Teacher.objects.count()} docentes')
         self.stdout.write(f'  - {Course.objects.count()} cursos')
         self.stdout.write(f'  - {Student.objects.count()} estudiantes')
+        self.stdout.write(f'  - {Asignatura.objects.count()} asignaturas')
         self.stdout.write(f'  - {StudentCourse.objects.count()} inscripciones')
-        self.stdout.write('\nCredenciales de acceso: admin / admin123')
-        self.stdout.write('JWT: POST /api/token/ con {"username": "admin", "password": "admin123"}')
+        self.stdout.write('\nCredenciales de acceso: admin / admin123 (superusuario)')
+        self.stdout.write('JWT: POST /api/token/ con {"username": "admin", "password": "admin123"} (cualquier usuario con credenciales válidas)')
         self.stdout.write('Docs: /docs/')
