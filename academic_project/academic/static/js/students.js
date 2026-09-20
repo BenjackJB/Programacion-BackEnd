@@ -6,10 +6,11 @@
 (function() {
     'use strict';
 
-    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, escapeHtml, formatDate } = window.AcademicCore;
+    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, confirmRestore, escapeHtml, formatDate } = window.AcademicCore;
 
     let studentsTable;
     let studentFormHandler;
+    let showInactive = false;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -18,6 +19,7 @@
         initStudentForm();
         initSearchAndOrderingUI();
         initNewStudentButton();
+        initInactiveFilter();
     }
 
     function initStudentsTable() {
@@ -78,13 +80,18 @@
                         : '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>'
                 },
             ],
-            actionsColumn: (student) => `
-                <td class="text-center">
+            actionsColumn: (student) => {
+                if (showInactive) {
+                    return `<td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-warning action-btn restore-student" data-id="${student.id}" title="Restaurar" aria-label="Restaurar estudiante ${student.full_name}"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    </td>`;
+                }
+                return `<td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-student" data-id="${student.id}" title="Editar" aria-label="Editar estudiante ${student.full_name}"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-student" data-id="${student.id}" data-active="${student.activo}" title="${student.activo ? 'Desactivar' : 'Activar'}" aria-label="${student.activo ? 'Desactivar' : 'Activar'} estudiante ${student.full_name}"><i class="bi ${student.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-student" data-id="${student.id}" title="Borrado lógico" aria-label="Eliminar estudiante ${student.full_name}"><i class="bi bi-trash"></i></button>
-                </td>
-            `,
+                </td>`;
+            },
             emptyMessage: 'No hay estudiantes registrados',
             emptyIcon: 'bi-people',
         });
@@ -156,6 +163,7 @@
         const editBtn = e.target.closest('.edit-student');
         const deleteBtn = e.target.closest('.delete-student');
         const toggleBtn = e.target.closest('.toggle-student');
+        const restoreBtn = e.target.closest('.restore-student');
 
         if (editBtn) {
             await openStudentModal(editBtn.dataset.id);
@@ -163,6 +171,8 @@
             await deleteStudent(deleteBtn.dataset.id);
         } else if (toggleBtn) {
             await toggleStudent(toggleBtn.dataset.id, toggleBtn.dataset.active === 'true');
+        } else if (restoreBtn) {
+            await restoreStudent(restoreBtn.dataset.id);
         }
     });
 
@@ -209,6 +219,26 @@
             } catch (error) {
                 toast.error(error.message);
             }
+        });
+    }
+
+    async function restoreStudent(studentId) {
+        confirmRestore('este estudiante', async () => {
+            try {
+                await apiFetch(`/api/students/${studentId}/restore/`, { method: 'POST' });
+                studentsTable.load();
+            } catch (error) {
+                toast.error(error.message);
+            }
+        });
+    }
+
+    function initInactiveFilter() {
+        const checkbox = document.getElementById('students-inactive-filter');
+        if (!checkbox) return;
+        checkbox.addEventListener('change', (e) => {
+            showInactive = e.target.checked;
+            studentsTable.setFilter('include_inactive', showInactive ? 'true' : '');
         });
     }
 

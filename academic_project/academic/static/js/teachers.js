@@ -6,10 +6,11 @@
 (function() {
     'use strict';
 
-    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, escapeHtml, formatDate } = window.AcademicCore;
+    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, confirmRestore, escapeHtml, formatDate } = window.AcademicCore;
 
     let teachersTable;
     let teacherFormHandler;
+    let showInactive = false;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -18,6 +19,7 @@
         initTeacherForm();
         initSearchAndOrderingUI();
         initNewTeacherButton();
+        initInactiveFilter();
     }
 
     function initTeachersTable() {
@@ -61,13 +63,18 @@
                         : '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>'
                 },
             ],
-            actionsColumn: (teacher) => `
-                <td class="text-center">
+            actionsColumn: (teacher) => {
+                if (showInactive) {
+                    return `<td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-warning action-btn restore-teacher" data-id="${teacher.id}" title="Restaurar" aria-label="Restaurar docente ${teacher.full_name}"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    </td>`;
+                }
+                return `<td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-teacher" data-id="${teacher.id}" title="Editar" aria-label="Editar docente ${teacher.full_name}"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-teacher" data-id="${teacher.id}" data-active="${teacher.activo}" title="${teacher.activo ? 'Desactivar' : 'Activar'}" aria-label="${teacher.activo ? 'Desactivar' : 'Activar'} docente ${teacher.full_name}"><i class="bi ${teacher.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-teacher" data-id="${teacher.id}" title="Borrado lógico" aria-label="Eliminar docente ${teacher.full_name}"><i class="bi bi-trash"></i></button>
-                </td>
-            `,
+                </td>`;
+            },
             emptyMessage: 'No hay docentes registrados',
             emptyIcon: 'bi-person-x',
         });
@@ -134,6 +141,7 @@
         const editBtn = e.target.closest('.edit-teacher');
         const deleteBtn = e.target.closest('.delete-teacher');
         const toggleBtn = e.target.closest('.toggle-teacher');
+        const restoreBtn = e.target.closest('.restore-teacher');
 
         if (editBtn) {
             await openTeacherModal(editBtn.dataset.id);
@@ -141,6 +149,8 @@
             await deleteTeacher(deleteBtn.dataset.id);
         } else if (toggleBtn) {
             await toggleTeacher(toggleBtn.dataset.id, toggleBtn.dataset.active === 'true');
+        } else if (restoreBtn) {
+            await restoreTeacher(restoreBtn.dataset.id);
         }
     });
 
@@ -187,6 +197,26 @@
             } catch (error) {
                 toast.error(error.message);
             }
+        });
+    }
+
+    async function restoreTeacher(teacherId) {
+        confirmRestore('este docente', async () => {
+            try {
+                await apiFetch(`/api/teachers/${teacherId}/restore/`, { method: 'POST' });
+                teachersTable.load();
+            } catch (error) {
+                toast.error(error.message);
+            }
+        });
+    }
+
+    function initInactiveFilter() {
+        const checkbox = document.getElementById('teachers-inactive-filter');
+        if (!checkbox) return;
+        checkbox.addEventListener('change', (e) => {
+            showInactive = e.target.checked;
+            teachersTable.setFilter('include_inactive', showInactive ? 'true' : '');
         });
     }
 

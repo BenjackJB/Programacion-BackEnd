@@ -53,6 +53,14 @@
                     <option value="-fecha_creacion">Más recientes</option>
                 </select>
             </div>
+            {% if user.is_superuser %}
+            <div class="col-12 col-md-1">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="teachers-inactive-filter" aria-label="Ver inactivos">
+                    <label class="form-check-label small" for="teachers-inactive-filter">Inactivos</label>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -141,5 +149,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/teachers.js' %}"></script>
+<script src="{% static 'js/teachers.js' %}?v=2"></script>
 {% endblock %}

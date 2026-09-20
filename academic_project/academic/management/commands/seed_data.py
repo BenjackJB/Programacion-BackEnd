@@ -73,29 +73,29 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'  Docente creado: {teacher.first_name} {teacher.last_name} ({teacher.get_sexo_display()})')
 
-        # Crear cursos con jornada
+        # Crear cursos/secciones con codigo (Carrera-Nivel-Grupo)
         cursos_data = [
-            {'name': 'Matematicas I', 'teacher': docentes[0], 'jornada': 'D'},
-            {'name': 'Fisica I', 'teacher': docentes[1], 'jornada': 'D'},
-            {'name': 'Programacion I', 'teacher': docentes[2], 'jornada': 'V'},
-            {'name': 'Base de Datos', 'teacher': docentes[3], 'jornada': 'V'},
-            {'name': 'Redes de Computadoras', 'teacher': docentes[4], 'jornada': 'D'},
-            {'name': 'Ingenieria de Software', 'teacher': docentes[5], 'jornada': 'V'},
-            {'name': 'Inteligencia Artificial', 'teacher': docentes[6], 'jornada': 'D'},
-            {'name': 'Sistemas Operativos', 'teacher': docentes[7], 'jornada': 'V'},
-            {'name': 'Estructuras de Datos', 'teacher': docentes[2], 'jornada': 'D'},
-            {'name': 'Calculo II', 'teacher': docentes[0], 'jornada': 'V'},
+            {'codigo': 'IEC-N4-C1', 'name': 'Ingenieria en Ciberseguridad - Nivel 4, Grupo 1', 'teacher': docentes[0], 'jornada': 'D'},
+            {'codigo': 'IEC-N4-C2', 'name': 'Ingenieria en Ciberseguridad - Nivel 4, Grupo 2', 'teacher': docentes[1], 'jornada': 'V'},
+            {'codigo': 'IMA-N2-C1', 'name': 'Ingenieria en Matematicas - Nivel 2, Grupo 1', 'teacher': docentes[2], 'jornada': 'D'},
+            {'codigo': 'IIN-N3-C1', 'name': 'Ingenieria Informatica - Nivel 3, Grupo 1', 'teacher': docentes[3], 'jornada': 'V'},
+            {'codigo': 'IDU-N1-C1', 'name': 'Ingenieria en Diseno - Nivel 1, Grupo 1', 'teacher': docentes[4], 'jornada': 'D'},
+            {'codigo': 'IBT-N5-C1', 'name': 'Ingenieria en Biotecnologia - Nivel 5, Grupo 1', 'teacher': docentes[5], 'jornada': 'V'},
+            {'codigo': 'ICE-N2-C2', 'name': 'Ingenieria Civil - Nivel 2, Grupo 2', 'teacher': docentes[6], 'jornada': 'D'},
+            {'codigo': 'IEC-N3-C1', 'name': 'Ingenieria en Ciberseguridad - Nivel 3, Grupo 1', 'teacher': docentes[7], 'jornada': 'V'},
+            {'codigo': 'IIN-N1-C1', 'name': 'Ingenieria Informatica - Nivel 1, Grupo 1', 'teacher': docentes[2], 'jornada': 'D'},
+            {'codigo': 'IMA-N4-C1', 'name': 'Ingenieria en Matematicas - Nivel 4, Grupo 1', 'teacher': docentes[0], 'jornada': 'V'},
         ]
 
         cursos = []
         for data in cursos_data:
             course, created = Course.objects.get_or_create(
-                name=data['name'],
-                defaults={'teacher': data['teacher'], 'jornada': data['jornada']}
+                codigo=data['codigo'],
+                defaults={'name': data['name'], 'teacher': data['teacher'], 'jornada': data['jornada']}
             )
             cursos.append(course)
             if created:
-                self.stdout.write(f'  Curso creado: {course.name} ({course.get_jornada_display()})')
+                self.stdout.write(f'  Seccion creada: {course.codigo} ({course.get_jornada_display()})')
 
         # Crear estudiantes con sexo y jornada
         estudiantes_data = [

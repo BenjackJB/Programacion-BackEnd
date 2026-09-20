@@ -51,6 +51,7 @@ urlpatterns = [
     path('courses/', views.CoursesView.as_view(), name='courses'),
     path('teachers/', views.TeachersView.as_view(), name='teachers'),
     path('students/', views.StudentsView.as_view(), name='students'),
+    path('asignaturas/', views.AsignaturasView.as_view(), name='asignaturas'),
 
     # API REST (DRF) - prefijo /api/
     path('api/', include(router.urls)),

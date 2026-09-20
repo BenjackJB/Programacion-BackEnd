@@ -144,6 +144,23 @@ class StudentsView(BaseTemplateView):
         return context
 
 
+class AsignaturasView(BaseTemplateView):
+    """
+    Vista para listado de asignaturas (asignaturas.html).
+    Asignatura es de libre acceso para lectura; el CRUD usa JWT.
+    """
+    template_name = 'academic/asignaturas.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': 'Listado de Asignaturas',
+            'page_header': 'Asignaturas',
+            'api_endpoint': '/api/asignaturas/',
+        })
+        return context
+
+
 class HomeView(BaseTemplateView):
     """
     Vista de inicio (dashboard) - redirige a courses.
@@ -162,21 +179,25 @@ class TeacherViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['activo', 'sexo']
+    filterset_fields = ['sexo']
     search_fields = ['first_name', 'last_name']
     ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
     ordering = ['last_name', 'first_name']
 
     def get_queryset(self):
-        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
+        """Solo activos por defecto. ?include_inactive=true muestra solo inactivos."""
         annotate = dict(courses_count=Count('courses', filter=Q(courses__activo=True)))
-        base = Teacher.all_objects if self.request.user.is_superuser else Teacher.objects
-        return base.annotate(**annotate)
+        if self.request.query_params.get('include_inactive') and self.request.user.is_superuser:
+            return Teacher.all_objects.filter(activo=False).annotate(**annotate)
+        return Teacher.objects.annotate(**annotate)
 
     def get_object(self):
-        """Usa el queryset anotado (con cursos_count) y filtra por rol.
-        Superusuarios acceden a inactivos (para restaurar); el resto solo a activos."""
-        queryset = self.filter_queryset(self.get_queryset())
+        """Superusuarios acceden a todos por PK (para editar/restaurar); el resto solo activos."""
+        annotate = dict(courses_count=Count('courses', filter=Q(courses__activo=True)))
+        if self.request.user.is_superuser:
+            queryset = Teacher.all_objects.annotate(**annotate)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         try:
@@ -204,13 +225,12 @@ class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['activo', 'jornada', 'teacher']
-    search_fields = ['name', 'teacher__first_name', 'teacher__last_name']
-    ordering_fields = ['name', 'fecha_creacion', 'students_count', 'teacher__last_name', 'teacher__first_name']
+    filterset_fields = ['jornada', 'teacher']
+    search_fields = ['name', 'codigo', 'teacher__first_name', 'teacher__last_name']
+    ordering_fields = ['name', 'codigo', 'fecha_creacion', 'students_count', 'teacher__last_name', 'teacher__first_name']
     ordering = ['name']
 
-    def get_queryset(self):
-        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
+    def _annotate_queryset(self, base):
         student_courses = Prefetch(
             'student_courses',
             queryset=StudentCourse.all_objects.select_related('student').filter(
@@ -221,15 +241,22 @@ class CourseViewSet(viewsets.ModelViewSet):
             'student_courses',
             filter=Q(student_courses__activo=True, student_courses__student__activo=True)
         )
-        base = Course.all_objects if self.request.user.is_superuser else Course.objects
         return base.select_related('teacher').prefetch_related(student_courses).annotate(
             students_count=students_count_annotation
         )
 
+    def get_queryset(self):
+        """Solo activos por defecto. ?include_inactive=true muestra solo inactivos."""
+        if self.request.query_params.get('include_inactive') and self.request.user.is_superuser:
+            return self._annotate_queryset(Course.all_objects.filter(activo=False))
+        return self._annotate_queryset(Course.objects)
+
     def get_object(self):
-        """Usa el queryset anotado (con students_count) y filtra por rol.
-        Superusuarios acceden a inactivos (para restaurar); el resto solo a activos."""
-        queryset = self.filter_queryset(self.get_queryset())
+        """Superusuarios acceden a todos por PK (para editar/restaurar); el resto solo activos."""
+        if self.request.user.is_superuser:
+            queryset = self._annotate_queryset(Course.all_objects)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         try:
@@ -257,24 +284,31 @@ class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['activo', 'sexo', 'jornada']
+    filterset_fields = ['sexo', 'jornada']
     search_fields = ['first_name', 'last_name']
     ordering_fields = ['last_name', 'first_name', 'fecha_creacion', 'courses_count']
     ordering = ['last_name', 'first_name']
 
     def get_queryset(self):
-        """Superusuarios ven todos (activos e inactivos). Solo activos para el resto."""
+        """Solo activos por defecto. ?include_inactive=true muestra solo inactivos."""
         courses_count_annotation = Count(
             'student_courses',
             filter=Q(student_courses__activo=True, student_courses__course__activo=True)
         )
-        base = Student.all_objects if self.request.user.is_superuser else Student.objects
-        return base.annotate(courses_count=courses_count_annotation)
+        if self.request.query_params.get('include_inactive') and self.request.user.is_superuser:
+            return Student.all_objects.filter(activo=False).annotate(courses_count=courses_count_annotation)
+        return Student.objects.annotate(courses_count=courses_count_annotation)
 
     def get_object(self):
-        """Usa el queryset anotado (con courses_count) y filtra por rol.
-        Superusuarios acceden a inactivos (para restaurar); el resto solo a activos."""
-        queryset = self.filter_queryset(self.get_queryset())
+        """Superusuarios acceden a todos por PK (para editar/restaurar); el resto solo activos."""
+        courses_count_annotation = Count(
+            'student_courses',
+            filter=Q(student_courses__activo=True, student_courses__course__activo=True)
+        )
+        if self.request.user.is_superuser:
+            queryset = Student.all_objects.annotate(courses_count=courses_count_annotation)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         try:
@@ -302,18 +336,14 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
     serializer_class = StudentCourseSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['activo', 'student', 'course']
+    filterset_fields = ['student', 'course']
     search_fields = ['student__first_name', 'student__last_name', 'course__name']
     ordering_fields = ['fecha_creacion']
     ordering = ['-fecha_creacion']
 
     def get_object(self):
-        """
-        Obtiene objeto por PK compuesta (student_id, course_id).
-        Superusuarios acceden a inactivas (para restaurar); el resto solo a activas.
-        """
-        base = StudentCourse.all_objects if self.request.user.is_superuser else StudentCourse.objects
-        queryset = base.select_related('student', 'course')
+        """Obtiene objeto por PK compuesta (student_id, course_id)."""
+        queryset = StudentCourse.all_objects.select_related('student', 'course')
         student_id = self.kwargs.get('student_id')
         course_id = self.kwargs.get('course_id')
         if not student_id or not course_id:
@@ -328,9 +358,9 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        """Superusuarios ven todas (activas e inactivas); el resto solo activas."""
-        if self.request.user.is_superuser:
-            queryset = StudentCourse.all_objects.select_related('student', 'course').all()
+        """Solo activas por defecto. ?include_inactive=true muestra solo inactivas."""
+        if self.request.query_params.get('include_inactive') and self.request.user.is_superuser:
+            queryset = StudentCourse.all_objects.select_related('student', 'course').filter(activo=False)
         else:
             queryset = StudentCourse.objects.select_related('student', 'course').all()
 
@@ -362,23 +392,25 @@ class StudentCourseViewSet(viewsets.ModelViewSet):
 class AsignaturaViewSet(viewsets.ModelViewSet):
     queryset = Asignatura.all_objects.all()
     serializer_class = AsignaturaSerializer
-    # Lectura pública para cualquiera; crear/editar/eliminar requiere autenticación (JWT o sesión).
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['activo', 'tipo', 'nivel']
+    filterset_fields = ['tipo', 'nivel']
     search_fields = ['nombre', 'codigo']
     ordering_fields = ['nombre', 'codigo', 'creditos', 'fecha_creacion']
     ordering = ['nombre']
 
     def get_queryset(self):
-        """Superusuarios ven todas (activas e inactivas); el resto solo activas."""
-        if self.request.user.is_superuser:
-            return Asignatura.all_objects.all()
+        """Solo activas por defecto. ?include_inactive=true muestra solo inactivas."""
+        if self.request.query_params.get('include_inactive') and getattr(self.request.user, 'is_superuser', False):
+            return Asignatura.all_objects.filter(activo=False)
         return Asignatura.objects.all()
 
     def get_object(self):
-        """Usa el queryset filtrado por rol (inactivas solo para superusuarios)."""
-        queryset = self.filter_queryset(self.get_queryset())
+        """Superusuarios acceden a todos por PK (para editar/restaurar); el resto solo activos."""
+        if getattr(self.request.user, 'is_superuser', False):
+            queryset = Asignatura.all_objects.all()
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         try:

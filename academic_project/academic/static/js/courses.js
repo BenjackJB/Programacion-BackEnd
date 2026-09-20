@@ -6,10 +6,11 @@
 (function() {
     'use strict';
 
-    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, escapeHtml, formatDate } = window.AcademicCore;
+    const { apiFetch, toast, modalManager, TableRenderer, FormHandler, confirmDelete, confirmToggle, confirmRestore, escapeHtml, formatDate } = window.AcademicCore;
 
     let coursesTable;
     let courseFormHandler;
+    let showInactive = false;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -19,6 +20,7 @@
         initStudentsModal();
         initSearchAndOrderingUI();
         initNewCourseButton();
+        initInactiveFilter();
     }
 
     function initCoursesTable() {
@@ -33,10 +35,10 @@
             columns: [
                 { key: 'id', class: 'text-center', format: v => `<strong>${v}</strong>` },
                 {
-                    key: 'name',
+                    key: 'codigo',
                     format: (v, course) => `
                         <div class="fw-medium">${escapeHtml(v)}</div>
-                        <small class="text-muted">Creado: ${formatDate(course.fecha_creacion)}</small>
+                        <small class="text-muted">${escapeHtml(course.name || '')}${course.name ? ' - ' : ''}Creado: ${formatDate(course.fecha_creacion)}</small>
                     `
                 },
                 {
@@ -76,14 +78,19 @@
                         : '<span class="badge bg-secondary badge-status"><i class="bi bi-x-circle me-1"></i>Inactivo</span>'
                 },
             ],
-            actionsColumn: (course) => `
-                <td class="text-center">
+            actionsColumn: (course) => {
+                if (showInactive) {
+                    return `<td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-warning action-btn restore-course" data-id="${course.id}" title="Restaurar" aria-label="Restaurar curso ${course.codigo}"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    </td>`;
+                }
+                return `<td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-primary action-btn edit-course" data-id="${course.id}" title="Editar" aria-label="Editar curso ${course.name}"><i class="bi bi-pencil"></i></button>
-                    <button type="button" class="btn btn-sm btn-outline-info action-btn manage-students" data-id="${course.id}" data-name="${escapeHtml(course.name)}" title="Gestionar estudiantes" aria-label="Gestionar estudiantes de ${course.name}"><i class="bi bi-person-plus"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-info action-btn manage-students" data-id="${course.id}" data-name="${escapeHtml(course.name || course.codigo)}" title="Gestionar estudiantes" aria-label="Gestionar estudiantes de ${course.name || course.codigo}"><i class="bi bi-person-plus"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-success action-btn toggle-course" data-id="${course.id}" data-active="${course.activo}" title="${course.activo ? 'Desactivar' : 'Activar'}" aria-label="${course.activo ? 'Desactivar' : 'Activar'} curso ${course.name}"><i class="bi ${course.activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i></button>
                     <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-course" data-id="${course.id}" title="Borrado lógico" aria-label="Eliminar curso ${course.name}"><i class="bi bi-trash"></i></button>
-                </td>
-            `,
+                </td>`;
+            },
             emptyMessage: 'No hay cursos registrados',
             emptyIcon: 'bi-journal-x',
         });
@@ -116,14 +123,15 @@
             modalId: 'courseModal',
             apiEndpoint: '/api/courses/',
             fields: [
-                { name: 'name', id: 'course-name', type: 'text', required: true },
+                { name: 'codigo', id: 'course-codigo', type: 'text', required: true },
+                { name: 'name', id: 'course-name', type: 'text' },
                 { name: 'teacher_id', id: 'course-teacher', type: 'number', required: true },
                 { name: 'jornada', id: 'course-jornada', type: 'select', required: true },
             ],
             onSuccess: () => coursesTable.load(),
             validate: (data) => {
-                if (!data.name?.trim()) {
-                    toast.error('El nombre del curso es obligatorio');
+                if (!data.codigo?.trim()) {
+                    toast.error('El codigo de seccion es obligatorio');
                     return false;
                 }
                 if (!data.teacher_id) {
@@ -176,6 +184,7 @@
         const manageBtn = e.target.closest('.manage-students');
         const deleteBtn = e.target.closest('.delete-course');
         const toggleBtn = e.target.closest('.toggle-course');
+        const restoreBtn = e.target.closest('.restore-course');
 
         if (editBtn) {
             await openCourseModal(editBtn.dataset.id);
@@ -185,6 +194,8 @@
             await deleteCourse(deleteBtn.dataset.id);
         } else if (toggleBtn) {
             await toggleCourse(toggleBtn.dataset.id, toggleBtn.dataset.active === 'true');
+        } else if (restoreBtn) {
+            await restoreCourse(restoreBtn.dataset.id);
         }
     });
 
@@ -233,6 +244,26 @@
             } catch (error) {
                 toast.error(error.message);
             }
+        });
+    }
+
+    async function restoreCourse(courseId) {
+        confirmRestore('este curso', async () => {
+            try {
+                await apiFetch(`/api/courses/${courseId}/restore/`, { method: 'POST' });
+                coursesTable.load();
+            } catch (error) {
+                toast.error(error.message);
+            }
+        });
+    }
+
+    function initInactiveFilter() {
+        const checkbox = document.getElementById('courses-inactive-filter');
+        if (!checkbox) return;
+        checkbox.addEventListener('change', (e) => {
+            showInactive = e.target.checked;
+            coursesTable.setFilter('include_inactive', showInactive ? 'true' : '');
         });
     }
 

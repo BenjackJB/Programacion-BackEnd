@@ -68,7 +68,7 @@ class CourseModelTest(TestCase):
 
     def setUp(self):
         self.teacher = Teacher.objects.create(first_name='María', last_name='González')
-        self.course = Course.objects.create(name='Matemáticas', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='MAT-N1-C1', name='Matemáticas', teacher=self.teacher)
 
     def test_course_creation(self):
         """Verifica creación correcta de curso."""
@@ -104,7 +104,7 @@ class StudentCourseModelTest(TestCase):
 
     def setUp(self):
         self.teacher = Teacher.objects.create(first_name='Ana', last_name='Martínez')
-        self.course = Course.objects.create(name='Física', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='FIS-N1-C1', name='Física', teacher=self.teacher)
         self.student = Student.objects.create(first_name='Laura', last_name='Sánchez')
         self.enrollment = StudentCourse.objects.create(
             student=self.student,
@@ -165,7 +165,7 @@ class CourseSerializerTest(TestCase):
 
     def setUp(self):
         self.teacher = Teacher.objects.create(first_name='Lucía', last_name='Fernández')
-        self.course = Course.objects.create(name='Química', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='QUI-N1-C1', name='Química', teacher=self.teacher)
         from .serializers import CourseSerializer
         self.serializer = CourseSerializer(self.course)
 
@@ -190,7 +190,7 @@ class StudentCourseSerializerTest(TestCase):
 
     def setUp(self):
         self.teacher = Teacher.objects.create(first_name='Test', last_name='Teacher')
-        self.course = Course.objects.create(name='Test Course', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='TST-N1-C1', name='Test Course', teacher=self.teacher)
         self.student = Student.objects.create(first_name='Test', last_name='Student')
         self.enrollment = StudentCourse.objects.create(
             student=self.student,
@@ -265,7 +265,7 @@ class CourseAPITest(APITestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         self.teacher = Teacher.objects.create(first_name='Prof', last_name='Test')
-        self.course = Course.objects.create(name='Curso API', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='API-N1-C1', name='Curso API', teacher=self.teacher)
 
     def test_list_courses(self):
         """GET /api/courses/"""
@@ -276,7 +276,7 @@ class CourseAPITest(APITestCase):
     def test_create_course(self):
         """POST /api/courses/"""
         url = reverse('course-list')
-        data = {'name': 'Nuevo Curso', 'teacher_id': self.teacher.pk}
+        data = {'codigo': 'NUEVO-N1-C1', 'name': 'Nuevo Curso', 'teacher_id': self.teacher.pk}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -323,7 +323,7 @@ class StudentCourseAPITest(APITestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         self.teacher = Teacher.objects.create(first_name='T', last_name='T')
-        self.course = Course.objects.create(name='Curso', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='CRS-N1-C1', name='Curso', teacher=self.teacher)
         self.student = Student.objects.create(first_name='Est', last_name='Udiante')
         self.enrollment = StudentCourse.objects.create(
             student=self.student,
@@ -441,7 +441,7 @@ class HTMLViewsTest(TestCase):
         self.user = User.objects.create_user('testuser', 'test@test.com', 'password123')
         self.client = Client()
         self.teacher = Teacher.objects.create(first_name='HTML', last_name='Teacher')
-        self.course = Course.objects.create(name='Curso HTML', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='HTM-N1-C1', name='Curso HTML', teacher=self.teacher)
         self.student = Student.objects.create(first_name='HTML', last_name='Student')
 
     def test_login_page_accessible(self):
@@ -555,22 +555,36 @@ class PermissionsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_superuser_sees_inactive_records_but_normal_user_does_not(self):
-        """El superusuario ve registros inactivos (para restaurarlos); los
-        usuarios autenticados normales no los ven; los anónimos no acceden."""
+        """El superusuario ve solo inactivos con ?include_inactive=true;
+        los usuarios normales no los ven ni con el parámetro; los anónimos no acceden."""
+        active_teacher = Teacher.objects.create(first_name='Activo', last_name='Docente')
         inactive_teacher = Teacher.objects.create(first_name='Inactivo', last_name='Docente')
         inactive_teacher.soft_delete()
 
-        # Superusuario SÍ los ve
+        # Superusuario SIN include_inactive solo ve activos
         self.client.force_authenticate(user=self.superuser)
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
+        ids = [item['id'] for item in response.data['results']]
+        self.assertIn(active_teacher.pk, ids)
+        self.assertNotIn(inactive_teacher.pk, ids)
 
-        # Usuario normal autenticado NO los ve
+        # Superusuario CON include_inactive solo ve inactivos
+        response = self.client.get('/api/teachers/?include_inactive=true')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in response.data['results']]
+        self.assertIn(inactive_teacher.pk, ids)
+        self.assertNotIn(active_teacher.pk, ids)
+
+        # Usuario normal autenticado NO los ve (ni con include_inactive)
         self.client.force_authenticate(user=self.normal_user)
         response = self.client.get('/api/teachers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(any(item['id'] == inactive_teacher.pk for item in response.data['results']))
+        self.assertNotIn(inactive_teacher.pk, [item['id'] for item in response.data['results']])
+
+        response = self.client.get('/api/teachers/?include_inactive=true')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(inactive_teacher.pk, [item['id'] for item in response.data['results']])
 
         # Anónimo no puede consultar (requiere JWT)
         self.client.force_authenticate(user=None)
@@ -597,7 +611,7 @@ class PermissionsTest(APITestCase):
 
     def test_admin_queryset_keeps_inactive_records_for_superuser(self):
         """El admin debe conservar registros desactivados para superusuario."""
-        inactive_course = Course.objects.create(name='Curso inactivo', teacher=self.teacher)
+        inactive_course = Course.objects.create(codigo='INA-N1-C1', name='Curso inactivo', teacher=self.teacher)
         inactive_course.soft_delete()
 
         request = self.client.request().wsgi_request
@@ -672,7 +686,7 @@ class SoftDeleteIntegrationTest(TestCase):
 
     def setUp(self):
         self.teacher = Teacher.objects.create(first_name='Soft', last_name='Delete')
-        self.course = Course.objects.create(name='Curso SD', teacher=self.teacher)
+        self.course = Course.objects.create(codigo='SD-N1-C1', name='Curso SD', teacher=self.teacher)
         self.student = Student.objects.create(first_name='Est', last_name='SD')
         self.enrollment = StudentCourse.objects.create(
             student=self.student,

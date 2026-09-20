@@ -94,7 +94,11 @@
 
             if (!response.ok) {
                 const errorMsg = data?.detail || data?.non_field_errors?.[0] || data?.message || `Error ${response.status}: ${response.statusText}`;
-                throw new Error(errorMsg);
+                const err = new Error(errorMsg);
+                if (data && typeof data === 'object' && !data.detail) {
+                    err.errors = data;
+                }
+                throw err;
             }
 
             return data;
@@ -643,6 +647,16 @@
         }
     }
 
+    async function confirmRestore(itemName, restoreFn) {
+        if (!confirm(`¿Seguro que quieres restaurar ${itemName}?`)) return;
+        try {
+            await restoreFn();
+            toast.success('Restaurado correctamente');
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
     // =============================================================================
     // EXPORTS
     // =============================================================================
@@ -660,5 +674,6 @@
         FormHandler,
         confirmDelete,
         confirmToggle,
+        confirmRestore,
     };
 })();

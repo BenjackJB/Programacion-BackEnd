@@ -137,7 +137,10 @@ class Course(BaseModel):
         ('V', 'Vespertina'),
     ]
 
-    name = models.CharField(max_length=100, verbose_name='Nombre del curso')
+    codigo = models.CharField(max_length=20, unique=True, default='SIN-CODIGO', verbose_name='Codigo de seccion',
+                             help_text='Ej: IEC-N4-C2 (Carrera-Nivel-Grupo)')
+    name = models.CharField(max_length=100, blank=True, verbose_name='Descripcion',
+                            help_text='Nombre descriptivo de la seccion (opcional)')
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.PROTECT,
@@ -150,10 +153,10 @@ class Course(BaseModel):
         db_table = 'course'
         verbose_name = 'Curso'
         verbose_name_plural = 'Cursos'
-        ordering = ['name']
+        ordering = ['codigo']
 
     def __str__(self):
-        return f"{self.name} ({self.get_jornada_display()})"
+        return f"{self.codigo}"
 
 
 # =============================================================================

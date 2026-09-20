@@ -86,12 +86,12 @@ class TeacherAdmin(SoftDeleteAdmin):
 
 @admin.register(Course)
 class CourseAdmin(SoftDeleteAdmin):
-    list_display = ('id', 'name', 'teacher', 'jornada', 'students_count', 'activo', 'fecha_creacion')
-    list_display_links = ('id', 'name')
+    list_display = ('id', 'codigo', 'name', 'teacher', 'jornada', 'students_count', 'activo', 'fecha_creacion')
+    list_display_links = ('id', 'codigo')
     list_filter = ('activo', 'jornada', 'teacher', 'fecha_creacion')
-    search_fields = ('name', 'teacher__first_name', 'teacher__last_name')
+    search_fields = ('codigo', 'name', 'teacher__first_name', 'teacher__last_name')
     raw_id_fields = ('teacher',)
-    ordering = ('name',)
+    ordering = ('codigo',)
     list_per_page = 25
 
     def students_count(self, obj):

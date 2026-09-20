@@ -379,7 +379,23 @@
                        href="{% url 'students' %}" aria-current="{% if request.resolver_match.url_name == 'students' %}page{% endif %}">
                         <i class="bi bi-people-fill me-2" aria-hidden="true"></i>Estudiantes
                     </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'asignaturas' %}active{% endif %}"
+                       href="{% url 'asignaturas' %}" aria-current="{% if request.resolver_match.url_name == 'asignaturas' %}page{% endif %}">
+                        <i class="bi bi-book-fill me-2" aria-hidden="true"></i>Asignaturas
+                    </a>
                     {% if user.is_superuser %}
+                    <hr class="text-secondary mx-3 my-1">
+                    <small class="text-muted px-3 mb-1">API / Documentación</small>
+                    <a class="nav-link" href="/docs/" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Documentación
+                    </a>
+                    <a class="nav-link" href="/api/schema/" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-diagram-3 me-2" aria-hidden="true"></i>Schema
+                    </a>
+                    <a class="nav-link" href="/api/coreapi/" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-braces me-2" aria-hidden="true"></i>CoreAPI
+                    </a>
+                    <hr class="text-secondary mx-3 my-1">
                     <a class="nav-link" href="{% url 'admin:index' %}" target="_blank" rel="noopener noreferrer">
                         <i class="bi bi-gear-fill me-2" aria-hidden="true"></i>Admin Django
                     </a>
