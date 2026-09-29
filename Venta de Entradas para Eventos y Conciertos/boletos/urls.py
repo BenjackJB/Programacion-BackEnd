@@ -151,13 +151,14 @@ urlpatterns = [
     # Se coloca SIEMPRE al final: Django recorre las rutas de arriba hacia
     # abajo, así que solo alcanza a esta expresión regular lo que ninguna otra
     # ruta reclamó. Cualquier dirección inexistente (/cualquier-cosa/) redirige
-    # con 302 al catálogo de eventos y conserva la consulta (?search=...).
+    # con 302 al catálogo de eventos y conserva la consulta (?search=...),
+    # incluido /admin/ (el admin de Django no existe en este proyecto, así que
+    # su dirección también cae en la red de seguridad en lugar de dar un 404).
     #
-    # Excepciones deliberadas (deben seguir respondiendo 404, no redirigir):
-    # - /api/...  : un endpoint del API no puede "rebotar" a una página HTML.
-    # - /admin/...: el admin de Django no existe en este proyecto.
+    # Única excepción deliberada: /api/... debe seguir respondiendo 404, porque
+    # un endpoint del API no puede "rebotar" a una página HTML.
     re_path(
-        r'^(?!api/|admin/).*$',
+        r'^(?!api/).*$',
         RedirectView.as_view(pattern_name='eventos', permanent=False, query_string=True),
         name='enlace-roto',
     ),

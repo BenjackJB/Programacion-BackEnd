@@ -52,8 +52,9 @@ Usuarios de la semilla:
 
 Todas las pantallas muestran en el pie: **Benjamin Jaque • IEC-N4-C2 • 2026**.
 
-Cualquier dirección inexistente o rota redirige con `re_path` al catálogo (red de
-seguridad que conserva la consulta); `/api/...` y `/admin/...` responden 404.
+Cualquier dirección inexistente o rota (incluida `/admin/`) redirige con `re_path`
+al catálogo conservando la consulta; `/api/...` responde 404, como corresponde a
+un endpoint de API. No hay admin de Django instalado.
 
 ## Endpoints del API (internos, JSON)
 

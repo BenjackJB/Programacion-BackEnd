@@ -13,6 +13,7 @@ Cobertura por criterio de evaluación:
 from datetime import timedelta
 from unittest import mock
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -774,9 +775,14 @@ class RestriccionesArquitecturaTests(BasePruebas):
     """Sin admin de Django, sin API navegable: solo vistas + JSON."""
 
     def test_no_existe_admin_de_django(self):
-        """La URL /admin/ no está registrada en el proyecto."""
+        """El admin de Django no está instalado: /admin/ cae en la red de seguridad."""
+        self.assertNotIn('django.contrib.admin', settings.INSTALLED_APPS)
         respuesta = nuevo_cliente().get('/admin/')
-        self.assertEqual(respuesta.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(respuesta.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(respuesta.url, reverse('eventos'))
+        # Nunca se renderiza el formulario de administración de Django.
+        pagina = nuevo_cliente().get(reverse('eventos'))
+        self.assertNotContains(pagina, 'Django administration', status_code=200)
 
     def test_api_solo_responde_json(self):
         """El API no expone render HTML (API browsable deshabilitada)."""
