@@ -1,0 +1,99 @@
+{% extends 'boletos/base.html' %}
+{% load static %}
+
+{# ==========================================================================
+   Catálogo público de eventos.
+   El listado, los filtros y la paginación se cargan vía JavaScript contra
+   GET /api/eventos/ (ver boletos/static/js/eventos.js).
+   ========================================================================== #}
+
+{% block content %}
+<!-- ============================ ENCABEZADO ============================ -->
+<header class="page-header mb-4">
+    <h1>{{ encabezado }}</h1>
+    <p class="text-muted mb-0">Busca, filtra y encuentra las entradas de los próximos eventos.</p>
+</header>
+
+<!-- ============================= FILTROS ============================= -->
+<section class="card mb-4" aria-labelledby="tituloFiltros">
+    <div class="card-body">
+        <h2 id="tituloFiltros" class="h6 text-uppercase text-muted mb-3">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtrar eventos
+        </h2>
+
+        {# Cada campo lleva el nombre del parámetro que espera el API. #}
+        <form id="formFiltros" class="row g-3 align-items-end" role="search" aria-label="Filtros del catálogo">
+            <!-- Búsqueda libre: nombre, artista o recinto -->
+            <div class="col-12 col-md-4">
+                <label for="filtroBusqueda" class="form-label">Búsqueda</label>
+                <div class="search-input-wrapper">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" class="form-control" id="filtroBusqueda" name="search"
+                           placeholder="Buscar por nombre, artista o recinto" autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Categoría del evento -->
+            <div class="col-6 col-md-2">
+                <label for="filtroCategoria" class="form-label">Categoría</label>
+                <select class="form-select" id="filtroCategoria" name="categoria">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+
+            <!-- Rango de precios -->
+            <div class="col-6 col-md-2">
+                <label for="filtroPrecioMin" class="form-label">Precio mínimo</label>
+                <input type="number" class="form-control" id="filtroPrecioMin" name="precio_min"
+                       min="0" step="1000" inputmode="numeric" placeholder="Mín. $">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="filtroPrecioMax" class="form-label">Precio máximo</label>
+                <input type="number" class="form-control" id="filtroPrecioMax" name="precio_max"
+                       min="0" step="1000" inputmode="numeric" placeholder="Máx. $">
+            </div>
+
+            <!-- Estado del evento -->
+            <div class="col-6 col-md-2">
+                <label for="filtroEstado" class="form-label">Estado</label>
+                <select class="form-select" id="filtroEstado" name="estado">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <!-- Ordenamiento -->
+            <div class="col-6 col-md-3">
+                <label for="filtroOrden" class="form-label">Ordenar por</label>
+                <select class="form-select" id="filtroOrden" name="ordering">
+                    <option value="">Próximos primero</option>
+                    <option value="-fecha">Más recientes</option>
+                    <option value="precio_desde">Menor precio</option>
+                    <option value="-precio_desde">Mayor precio</option>
+                    <option value="nombre">Nombre A-Z</option>
+                </select>
+            </div>
+
+            <!-- Acciones del formulario -->
+            <div class="col-12 col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-accent">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>Filtrar
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="btnLimpiar">
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ========================= RESULTADOS ========================= -->
+<section id="seccionResultados" data-api="{{ api_endpoint }}" aria-live="polite" aria-label="Resultados del catálogo">
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4" id="gridEventos"></div>
+    {# La paginación se inyecta aquí (Boletos.paginacion). #}
+    <div id="paginacionEventos"></div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/eventos.js' %}"></script>
+{% endblock %}

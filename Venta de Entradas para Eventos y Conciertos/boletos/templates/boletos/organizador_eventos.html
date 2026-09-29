@@ -1,0 +1,294 @@
+{% extends 'boletos/base.html' %}
+{% load static %}
+
+{# ==========================================================================
+   Panel del organizador: listado, alta, edición y baja de eventos + sectores.
+   La vista Django ya exige rol organizador; los datos se cargan con
+   GET /api/eventos/?organizador=<id> desde static/js/organizador_eventos.js
+   ========================================================================== #}
+{% block extra_css %}
+<style>
+    /* Fila de evento desactivado: se atenúa para distinguirlo de los activos. */
+    #tablaEventos tr.evento-inactivo { opacity: .6; }
+    #tablaEventos th, #tablaEventos td { padding: .7rem .75rem; }
+    .acciones-evento .btn { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+{# data-organizador: id del usuario JWT, usado por el JS como filtro fijo. #}
+<div id="vistaEventos" data-organizador="{{ usuario_jwt.id|default:'' }}">
+
+    {# ============================ CABECERA ============================ #}
+    <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h1><i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Mis eventos</h1>
+            <p class="text-muted mb-0">Crea y administra tus eventos, sectores y disponibilidad de entradas.</p>
+        </div>
+        <button type="button" class="btn btn-accent" id="btnNuevoEvento"
+                data-bs-toggle="modal" data-bs-target="#modalEvento">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo evento
+        </button>
+    </div>
+
+    {# ============================ FILTROS ============================ #}
+    <section class="card mb-4" aria-label="Filtros de eventos">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="filtroBuscar" class="form-label">Buscar</label>
+                    <div class="search-input-wrapper">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" class="form-control" id="filtroBuscar"
+                               placeholder="Nombre, artista o recinto..." aria-describedby="filtroAyudaBuscar">
+                    </div>
+                    <div class="form-text d-none d-md-block" id="filtroAyudaBuscar">Pulsa Enter para buscar.</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="filtroCategoria" class="form-label">Categoría</label>
+                    <select class="form-select" id="filtroCategoria">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="filtroEstado" class="form-label">Estado</label>
+                    <select class="form-select" id="filtroEstado">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="button" class="btn btn-primary w-100" id="btnFiltrar">
+                        <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# ============================ TABLA DE EVENTOS ============================ #}
+    <section class="card" aria-label="Listado de eventos">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-table me-2" aria-hidden="true"></i>Eventos</span>
+            <span class="badge bg-light text-dark" id="contadorEventos">0</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Evento</th>
+                            <th scope="col">Artista</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Recinto</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Disponibles</th>
+                            <th scope="col">Sectores</th>
+                            <th scope="col" class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaEventos">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Cargando eventos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="paginacionEventos"></div>
+        </div>
+    </section>
+
+    {# ============================ MODAL: EVENTO ============================ #}
+    <div class="modal fade" id="modalEvento" tabindex="-1" aria-labelledby="modalEventoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="modalEventoLabel">
+                        <i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Evento
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <form id="formEvento" novalidate>
+                    <div class="modal-body">
+                        {# Vacío = creación; con valor = edición (PUT /api/eventos/{id}/) #}
+                        <input type="hidden" id="eventoId" name="id" value="">
+                        <div id="eventoError" class="alert alert-danger d-none" role="alert"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label for="eventoNombre" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="eventoNombre" name="nombre"
+                                       maxlength="200" required>
+                                <small class="text-danger" data-error-para="nombre"></small>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="eventoArtista" class="form-label">Artista / Elenco *</label>
+                                <input type="text" class="form-control" id="eventoArtista" name="artista"
+                                       maxlength="200" required>
+                                <small class="text-danger" data-error-para="artista"></small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="eventoCategoria" class="form-label">Categoría</label>
+                                <select class="form-select" id="eventoCategoria" name="categoria"></select>
+                                <small class="text-danger" data-error-para="categoria"></small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="eventoEstado" class="form-label">Estado</label>
+                                <select class="form-select" id="eventoEstado" name="estado"></select>
+                                <small class="text-danger" data-error-para="estado"></small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="eventoFecha" class="form-label">Fecha y hora *</label>
+                                <input type="datetime-local" class="form-control" id="eventoFecha" name="fecha" required>
+                                <small class="text-danger" data-error-para="fecha"></small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="eventoRecinto" class="form-label">Recinto *</label>
+                                <select class="form-select" id="eventoRecinto" name="recinto" required>
+                                    <option value="">Selecciona un recinto...</option>
+                                </select>
+                                <small class="text-danger" data-error-para="recinto"></small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="eventoImagen" class="form-label">Imagen (URL)</label>
+                                <input type="url" class="form-control" id="eventoImagen" name="imagen_url"
+                                       placeholder="https://..." >
+                                <small class="text-danger" data-error-para="imagen_url"></small>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="eventoDescripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="eventoDescripcion" name="descripcion"
+                                          rows="3" maxlength="2000"></textarea>
+                                <small class="text-danger" data-error-para="descripcion"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-accent" id="btnGuardarEvento">
+                            <span class="spinner-border spinner-border-sm d-none me-1" role="status" aria-hidden="true"></span>
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ============================ MODAL: SECTORES ============================ #}
+    <div class="modal fade" id="modalSectores" tabindex="-1" aria-labelledby="modalSectoresLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="modalSectoresLabel">
+                        <i class="bi bi-diagram-3 me-2" aria-hidden="true"></i>Sectores del evento
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="text-muted mb-3" id="sectoresSubtitulo">Sin evento seleccionado.</p>
+
+                    {# Listado de sectores del evento seleccionado #}
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Sector</th>
+                                    <th scope="col">Precio</th>
+                                    <th scope="col">Stock total</th>
+                                    <th scope="col">Disponible</th>
+                                    <th scope="col">Vendidas</th>
+                                    <th scope="col" class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaSectores">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# Formulario de alta/edición de sector #}
+                    <div class="card bg-body-tertiary border-0">
+                        <div class="card-body">
+                            <h3 class="h6 mb-3" id="tituloFormSector">
+                                <i class="bi bi-plus-square me-2" aria-hidden="true"></i>Nuevo sector
+                            </h3>
+
+                            <form id="formSector" novalidate>
+                                <input type="hidden" id="sectorId" value="">
+                                <div id="sectorError" class="alert alert-danger d-none" role="alert"></div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="sectorNombre" class="form-label">Nombre *</label>
+                                        <input type="text" class="form-control" id="sectorNombre" name="nombre"
+                                               maxlength="100" required placeholder="Ej: VIP, General, Palco">
+                                        <small class="text-danger" data-error-para="nombre"></small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="sectorPrecio" class="form-label">Precio *</label>
+                                        <input type="number" class="form-control" id="sectorPrecio" name="precio"
+                                               min="0" step="1" required placeholder="15000">
+                                        <small class="text-danger" data-error-para="precio"></small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="sectorStockTotal" class="form-label">Stock total *</label>
+                                        <input type="number" class="form-control" id="sectorStockTotal" name="stock_total"
+                                               min="1" step="1" required placeholder="100">
+                                        <small class="text-danger" data-error-para="stock_total"></small>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="sectorStockCompleto" checked>
+                                            <label class="form-check-label" for="sectorStockCompleto">
+                                                stock_disponible = stock_total
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4" id="contenedorStockDisponible">
+                                        <label for="sectorStockDisponible" class="form-label">Stock disponible</label>
+                                        <input type="number" class="form-control" id="sectorStockDisponible"
+                                               name="stock_disponible" min="0" step="1" disabled>
+                                        <small class="text-danger" data-error-para="stock_disponible"></small>
+                                    </div>
+
+                                    <div class="col-12 d-flex gap-2">
+                                        <button type="submit" class="btn btn-accent" id="btnGuardarSector">
+                                            <span class="spinner-border spinner-border-sm d-none me-1" role="status" aria-hidden="true"></span>
+                                            <i class="bi bi-save me-1" aria-hidden="true"></i><span id="textoBtnSector">Agregar sector</span>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="btnNuevoSector">
+                                            <i class="bi bi-eraser me-1" aria-hidden="true"></i>Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/organizador_eventos.js' %}"></script>
+{% endblock %}

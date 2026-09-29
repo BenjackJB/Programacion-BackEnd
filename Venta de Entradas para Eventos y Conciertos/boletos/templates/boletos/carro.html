@@ -1,0 +1,67 @@
+{% extends 'boletos/base.html' %}
+{% load static %}
+
+{# ==========================================================================
+   Carro de compras del espectador (solo sesión JWT de espectador).
+   El JS consulta GET /api/carro-tickets/ y maneja agregar/quitar ítems,
+   vaciar el carro y pagar (POST /api/compras/pagar/).
+   ========================================================================== #}
+
+{% block content %}
+<!-- ============================ ENCABEZADO ============================ -->
+<header class="page-header mb-4">
+    <h1>Mi carro de compras</h1>
+    <p class="text-muted mb-0">{{ encabezado }}: revisa tus reservas antes de pagar.</p>
+</header>
+
+{# Contenedor principal: los data-* llevan los endpoints al JavaScript. #}
+<div id="paginaCarro"
+     data-api="{{ api_endpoint }}"
+     data-pagar="{% url 'api-pagar' %}"
+     data-mis-entradas="{% url 'mis-entradas' %}"
+     data-catalogo="{% url 'eventos' %}">
+
+    <!-- ===================== TABLA DE ÍTEMS ===================== -->
+    <section class="card mb-4" aria-labelledby="tituloCarro">
+        <div class="card-header" id="tituloCarro">
+            <i class="bi bi-cart3 me-2" aria-hidden="true"></i>Reserva temporal de entradas
+        </div>
+        <div class="card-body p-0" id="carroContenido" aria-live="polite">
+            <p class="text-muted p-3 mb-0">Cargando tu carro…</p>
+        </div>
+    </section>
+
+    <!-- ===================== RESUMEN Y ACCIONES ===================== -->
+    <section class="card mb-4" aria-labelledby="tituloResumen">
+        <div class="card-header" id="tituloResumen">
+            <i class="bi bi-receipt me-2" aria-hidden="true"></i>Resumen de la compra
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Entradas</span>
+                <strong id="resumenEntradas">0</strong>
+            </div>
+            <div class="d-flex justify-content-between fs-5 mb-3">
+                <span>Total</span>
+                <strong id="resumenTotal">$ 0</strong>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-accent" id="btnPagar" disabled>
+                    <i class="bi bi-credit-card me-1" aria-hidden="true"></i>Pagar ahora
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="btnVaciar" disabled>
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Vaciar carro
+                </button>
+                <a class="btn btn-outline-primary" href="{% url 'eventos' %}">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>Seguir comprando
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/carro.js' %}"></script>
+{% endblock %}

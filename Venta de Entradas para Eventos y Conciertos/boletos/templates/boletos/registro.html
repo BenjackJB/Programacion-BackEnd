@@ -1,0 +1,101 @@
+{% extends 'boletos/base.html' %}
+{% load static %}
+
+{# ==========================================================================
+   Pantalla de registro de cuenta (Espectador u Organizador).
+   El formulario llama a POST /api/registro/ desde static/js/registro.js,
+   guarda la sesión JWT y redirige según el rol elegido.
+   ========================================================================== #}
+{% block content %}
+<div class="container-fluid">
+    <div class="card mx-auto my-5" style="max-width: 520px;">
+        <div class="card-header">
+            <h1 class="h5 mb-0"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>Crear cuenta</h1>
+        </div>
+        <div class="card-body p-4">
+
+            <form id="registroForm" novalidate>
+
+                {# ============================ DATOS PERSONALES ============================ #}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="reg-first_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="reg-first_name" name="first_name"
+                               autocomplete="given-name" required>
+                        <small class="text-danger" data-error-para="first_name"></small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="reg-last_name" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="reg-last_name" name="last_name"
+                               autocomplete="family-name" required>
+                        <small class="text-danger" data-error-para="last_name"></small>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="reg-email" class="form-label">Correo</label>
+                        <input type="email" class="form-control" id="reg-email" name="email"
+                               autocomplete="email" required>
+                        <small class="text-danger" data-error-para="email"></small>
+                    </div>
+
+                    <div class="col-md-7">
+                        <label for="reg-username" class="form-label">Usuario</label>
+                        <input type="text" class="form-control" id="reg-username" name="username"
+                               autocomplete="username" required>
+                        <small class="text-danger" data-error-para="username"></small>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="reg-telefono" class="form-label">Teléfono <span class="text-muted">(opcional)</span></label>
+                        <input type="tel" class="form-control" id="reg-telefono" name="telefono"
+                               autocomplete="tel" maxlength="20">
+                        <small class="text-danger" data-error-para="telefono"></small>
+                    </div>
+
+                    {# ============================ ACCESO ============================ #}
+                    <div class="col-md-6">
+                        <label for="reg-password" class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="reg-password" name="password"
+                               minlength="8" autocomplete="new-password" required
+                               aria-describedby="regPasswordAyuda">
+                        <div class="form-text" id="regPasswordAyuda">Mínimo 8 caracteres.</div>
+                        <small class="text-danger" data-error-para="password"></small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="reg-password2" class="form-label">Confirmar contraseña</label>
+                        <input type="password" class="form-control" id="reg-password2" name="password2"
+                               minlength="8" autocomplete="new-password" required>
+                        <small class="text-danger" id="errPassword2"></small>
+                    </div>
+
+                    {# ============================ ROL ============================ #}
+                    <div class="col-12">
+                        <label for="reg-rol" class="form-label">Rol</label>
+                        <select class="form-select" id="reg-rol" name="rol" required>
+                            <option value="espectador" selected>Espectador</option>
+                            <option value="organizador">Organizador</option>
+                        </select>
+                        <div class="form-text" id="rolAyuda">Compras entradas a los eventos que te interesan.</div>
+                        <small class="text-danger" data-error-para="rol"></small>
+                    </div>
+                </div>
+
+                {# Errores generales devueltos por el API (400) #}
+                <div id="registroError" class="alert alert-danger d-none mt-3" role="alert" aria-live="assertive"></div>
+
+                <button type="submit" class="btn btn-accent w-100 mt-4" id="btnRegistrarse">
+                    <span class="spinner-border spinner-border-sm d-none me-1" role="status" aria-hidden="true"></span>
+                    <i class="bi bi-person-check me-1" aria-hidden="true"></i>Crear cuenta
+                </button>
+            </form>
+
+            <p class="text-center mt-4 mb-0">
+                ¿Ya tienes cuenta? <a href="{% url 'login' %}">Inicia sesión</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/registro.js' %}"></script>
+{% endblock %}

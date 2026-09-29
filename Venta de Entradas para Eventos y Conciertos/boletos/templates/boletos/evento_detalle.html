@@ -1,0 +1,128 @@
+{% extends 'boletos/base.html' %}
+{% load static %}
+
+{# ==========================================================================
+   Detalle de un evento.
+   La ficha se renderiza en el servidor con los datos de `evento`;
+   la tabla de localidades/sectores la carga el JS vía GET {{ api_sectores }}.
+   ========================================================================== #}
+
+{% block extra_css %}
+<style>
+    /* Portada del evento en la ficha de detalle */
+    .detalle-portada {
+        width: 100%;
+        max-height: 360px;
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    }
+    .detalle-portada-vacia {
+        height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--border-radius);
+        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        color: rgba(255, 255, 255, .65);
+        font-size: 3.5rem;
+    }
+    .detalle-dl dt { color: var(--primary-color); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ============================ FICHA DEL EVENTO ============================ -->
+<article>
+    <header class="page-header mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            {# Badge de categoría y estado del evento (clases .badge-estado del base) #}
+            <span class="badge badge-categoria">{{ evento.get_categoria_display }}</span>
+            <span class="badge badge-estado {{ evento.estado }}">{{ evento.get_estado_display }}</span>
+        </div>
+        <h1>{{ evento.nombre }}</h1>
+        <p class="fw-bold mb-0">{{ evento.artista }}</p>
+    </header>
+
+    <div class="row g-4 mb-4">
+        <!-- Portada -->
+        <div class="col-12 col-lg-6">
+            {% if evento.imagen_url %}
+            <img class="detalle-portada" src="{{ evento.imagen_url }}" alt="Portada de {{ evento.nombre }}">
+            {% else %}
+            <div class="detalle-portada-vacia" role="img" aria-label="Sin imagen de portada">
+                <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Información práctica -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-2" aria-hidden="true"></i>Información del evento
+                </div>
+                <div class="card-body">
+                    <dl class="row detalle-dl mb-3">
+                        <dt class="col-sm-4">Fecha</dt>
+                        <dd class="col-sm-8">{{ evento.fecha|date:"l d \d\e F \d\e Y, H:i" }}</dd>
+
+                        <dt class="col-sm-4">Recinto</dt>
+                        <dd class="col-sm-8">{{ evento.recinto.nombre }}</dd>
+
+                        <dt class="col-sm-4">Dirección</dt>
+                        <dd class="col-sm-8">
+                            {{ evento.recinto.direccion|default:"Sin dirección registrada" }},
+                            {{ evento.recinto.ciudad }}
+                        </dd>
+
+                        <dt class="col-sm-4">Organiza</dt>
+                        <dd class="col-sm-8">{{ evento.organizador.nombre_completo }}</dd>
+
+                        <dt class="col-sm-4">Desde</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge badge-precio">Desde ${{ evento.precio_minimo|floatformat:0 }}</span>
+                        </dd>
+                    </dl>
+
+                    <h2 class="h6 text-uppercase text-muted">Descripción</h2>
+                    <p class="mb-0">{{ evento.descripcion|default:"Este evento aún no tiene descripción."|linebreaksbr }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones principales -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="{% url 'eventos' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al catálogo
+        </a>
+        {% if usuario_jwt and not es_organizador %}
+        <a href="{% url 'carro' %}" class="btn btn-accent" id="btnIrCarro">
+            <i class="bi bi-cart3 me-1" aria-hidden="true"></i>Ir al carro
+        </a>
+        {% endif %}
+    </div>
+</article>
+
+{# El JS rellena este contenedor con la tabla de sectores del evento.
+   Los data-* indican al JS el endpoint, el rol de la sesión y a dónde
+   enviar al usuario si aún no ha iniciado sesión. #}
+<section class="card mb-4"
+         id="sectoresContainer"
+         data-api="{{ api_sectores }}"
+         data-api-carro="{% url 'api-carro' %}"
+         data-rol="{{ usuario_jwt.rol|default:'' }}"
+         data-login-url="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">
+    <div class="card-header">
+        <i class="bi bi-diagram-3 me-2" aria-hidden="true"></i>Localidades / Sectores
+    </div>
+    <div class="card-body p-0" id="sectoresCuerpo">
+        <p class="text-muted p-3 mb-0">Cargando localidades…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/evento_detalle.js' %}"></script>
+{% endblock %}
