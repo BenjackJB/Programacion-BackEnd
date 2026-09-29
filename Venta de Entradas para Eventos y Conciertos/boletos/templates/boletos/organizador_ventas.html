@@ -1,13 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Panel del organizador: ventas y órdenes de compra.
-   Resumen, filtros (estado, evento, rango de fechas y búsqueda) y tabla de
-   órdenes con detalle, entrega y cancelación. Datos desde GET /api/compras/
-   y cambios de estado con PATCH /api/compras/{id}/estado/
-   (static/js/organizador_ventas.js).
-   ========================================================================== #}
+{#========================================================================== Panel del organizador: ventas y órdenes de compra. Resumen, filtros (estado, evento, rango de fechas y búsqueda) y tabla de órdenes con detalle, entrega y cancelación. Datos desde GET /api/compras/ y cambios de estado con PATCH /api/compras/{id}/estado/ (static/js/organizador_ventas.js). ==========================================================================#}
 {% block extra_css %}
 <style>
     .codigo-mono {
@@ -24,13 +18,13 @@
 {% block content %}
 <div id="vistaVentas" data-organizador="{{ usuario_jwt.id|default:'' }}">
 
-    {# ============================ CABECERA ============================ #}
+    {#============================ CABECERA ============================#}
     <div class="page-header mb-4">
         <h1><i class="bi bi-cash-stack me-2" aria-hidden="true"></i>Ventas y órdenes</h1>
         <p class="text-muted mb-0">Consulta las órdenes de tus eventos y gestiona su entrega o cancelación.</p>
     </div>
 
-    {# ================ RESUMEN (calculado en cliente) ================ #}
+    {#================ RESUMEN (calculado en cliente) ================#}
     <section class="row g-3 mb-4" id="resumenVentas" aria-label="Resumen de ventas">
         <div class="col-6 col-lg-3">
             <div class="card h-100">
@@ -89,7 +83,7 @@
         </div>
     </section>
 
-    {# ============================ FILTROS ============================ #}
+    {#============================ FILTROS ============================#}
     <section class="card mb-4" aria-label="Filtros de órdenes">
         <div class="card-body">
             <div class="row g-3 align-items-end">
@@ -133,7 +127,7 @@
         </div>
     </section>
 
-    {# ============================ TABLA DE ÓRDENES ============================ #}
+    {#============================ TABLA DE ÓRDENES ============================#}
     <section class="card" aria-label="Listado de órdenes">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-table me-2" aria-hidden="true"></i>Órdenes de compra</span>
@@ -167,7 +161,7 @@
         </div>
     </section>
 
-    {# ============================ MODAL: DETALLE ============================ #}
+    {#============================ MODAL: DETALLE ============================#}
     <div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalDetalleLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -185,7 +179,7 @@
                     </div>
 
                     <div id="detalleContenido" class="d-none">
-                        {# Datos generales de la orden #}
+                        {#Datos generales de la orden#}
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <div class="text-muted small">Código</div>
@@ -217,7 +211,7 @@
                             </div>
                         </div>
 
-                        {# Tickets emitidos #}
+                        {#Tickets emitidos#}
                         <h3 class="h6"><i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i>Entradas</h3>
                         <div class="table-responsive mb-4">
                             <table class="table table-sm table-hover align-middle mb-0">
@@ -233,7 +227,7 @@
                             </table>
                         </div>
 
-                        {# Historial de cambios de estado #}
+                        {#Historial de cambios de estado#}
                         <h3 class="h6"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>Historial de estados</h3>
                         <ul class="list-group" id="detalleHistorial"></ul>
                     </div>

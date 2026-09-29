@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Carro de compras del espectador (solo sesión JWT de espectador).
-   El JS consulta GET /api/carro-tickets/ y maneja agregar/quitar ítems,
-   vaciar el carro y pagar (POST /api/compras/pagar/).
-   ========================================================================== #}
+{#========================================================================== Carro de compras del espectador (solo sesión JWT de espectador). El JS consulta GET /api/carro-tickets/ y maneja agregar/quitar ítems, vaciar el carro y pagar (POST /api/compras/pagar/). ==========================================================================#}
 
 {% block content %}
 <!-- ============================ ENCABEZADO ============================ -->
@@ -14,7 +10,7 @@
     <p class="text-muted mb-0">{{ encabezado }}: revisa tus reservas antes de pagar.</p>
 </header>
 
-{# Contenedor principal: los data-* llevan los endpoints al JavaScript. #}
+{#Contenedor principal: los data-* llevan los endpoints al JavaScript.#}
 <div id="paginaCarro"
      data-api="{{ api_endpoint }}"
      data-pagar="{% url 'api-pagar' %}"

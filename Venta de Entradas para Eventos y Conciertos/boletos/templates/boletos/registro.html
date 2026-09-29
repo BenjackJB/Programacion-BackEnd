@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Pantalla de registro de cuenta (Espectador u Organizador).
-   El formulario llama a POST /api/registro/ desde static/js/registro.js,
-   guarda la sesión JWT y redirige según el rol elegido.
-   ========================================================================== #}
+{#========================================================================== Pantalla de registro de cuenta (Espectador u Organizador). El formulario llama a POST /api/registro/ desde static/js/registro.js, guarda la sesión JWT y redirige según el rol elegido. ==========================================================================#}
 {% block content %}
 <div class="container-fluid">
     <div class="card mx-auto my-5" style="max-width: 520px;">
@@ -16,7 +12,7 @@
 
             <form id="registroForm" novalidate>
 
-                {# ============================ DATOS PERSONALES ============================ #}
+                {#============================ DATOS PERSONALES ============================#}
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="reg-first_name" class="form-label">Nombre</label>
@@ -51,7 +47,7 @@
                         <small class="text-danger" data-error-para="telefono"></small>
                     </div>
 
-                    {# ============================ ACCESO ============================ #}
+                    {#============================ ACCESO ============================#}
                     <div class="col-md-6">
                         <label for="reg-password" class="form-label">Contraseña</label>
                         <input type="password" class="form-control" id="reg-password" name="password"
@@ -67,7 +63,7 @@
                         <small class="text-danger" id="errPassword2"></small>
                     </div>
 
-                    {# ============================ ROL ============================ #}
+                    {#============================ ROL ============================#}
                     <div class="col-12">
                         <label for="reg-rol" class="form-label">Rol</label>
                         <select class="form-select" id="reg-rol" name="rol" required>
@@ -79,7 +75,7 @@
                     </div>
                 </div>
 
-                {# Errores generales devueltos por el API (400) #}
+                {#Errores generales devueltos por el API (400)#}
                 <div id="registroError" class="alert alert-danger d-none mt-3" role="alert" aria-live="assertive"></div>
 
                 <button type="submit" class="btn btn-accent w-100 mt-4" id="btnRegistrarse">

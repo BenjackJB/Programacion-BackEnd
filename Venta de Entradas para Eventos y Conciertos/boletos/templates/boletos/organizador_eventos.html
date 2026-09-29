@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Panel del organizador: listado, alta, edición y baja de eventos + sectores.
-   La vista Django ya exige rol organizador; los datos se cargan con
-   GET /api/eventos/?organizador=<id> desde static/js/organizador_eventos.js
-   ========================================================================== #}
+{#========================================================================== Panel del organizador: listado, alta, edición y baja de eventos + sectores. La vista Django ya exige rol organizador; los datos se cargan con GET /api/eventos/?organizador=<id> desde static/js/organizador_eventos.js ==========================================================================#}
 {% block extra_css %}
 <style>
     /* Fila de evento desactivado: se atenúa para distinguirlo de los activos. */
@@ -16,10 +12,10 @@
 {% endblock %}
 
 {% block content %}
-{# data-organizador: id del usuario JWT, usado por el JS como filtro fijo. #}
+{#data-organizador: id del usuario JWT, usado por el JS como filtro fijo.#}
 <div id="vistaEventos" data-organizador="{{ usuario_jwt.id|default:'' }}">
 
-    {# ============================ CABECERA ============================ #}
+    {#============================ CABECERA ============================#}
     <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h1><i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Mis eventos</h1>
@@ -31,7 +27,7 @@
         </button>
     </div>
 
-    {# ============================ FILTROS ============================ #}
+    {#============================ FILTROS ============================#}
     <section class="card mb-4" aria-label="Filtros de eventos">
         <div class="card-body">
             <div class="row g-3 align-items-end">
@@ -65,7 +61,7 @@
         </div>
     </section>
 
-    {# ============================ TABLA DE EVENTOS ============================ #}
+    {#============================ TABLA DE EVENTOS ============================#}
     <section class="card" aria-label="Listado de eventos">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-table me-2" aria-hidden="true"></i>Eventos</span>
@@ -100,7 +96,7 @@
         </div>
     </section>
 
-    {# ============================ MODAL: EVENTO ============================ #}
+    {#============================ MODAL: EVENTO ============================#}
     <div class="modal fade" id="modalEvento" tabindex="-1" aria-labelledby="modalEventoLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -113,7 +109,7 @@
 
                 <form id="formEvento" novalidate>
                     <div class="modal-body">
-                        {# Vacío = creación; con valor = edición (PUT /api/eventos/{id}/) #}
+                        {#Vacío = creación; con valor = edición (PUT /api/eventos/{id}/)#}
                         <input type="hidden" id="eventoId" name="id" value="">
                         <div id="eventoError" class="alert alert-danger d-none" role="alert"></div>
 
@@ -182,7 +178,7 @@
         </div>
     </div>
 
-    {# ============================ MODAL: SECTORES ============================ #}
+    {#============================ MODAL: SECTORES ============================#}
     <div class="modal fade" id="modalSectores" tabindex="-1" aria-labelledby="modalSectoresLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
@@ -196,7 +192,7 @@
                 <div class="modal-body">
                     <p class="text-muted mb-3" id="sectoresSubtitulo">Sin evento seleccionado.</p>
 
-                    {# Listado de sectores del evento seleccionado #}
+                    {#Listado de sectores del evento seleccionado#}
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-hover align-middle mb-0">
                             <thead class="table-light">
@@ -217,7 +213,7 @@
                         </table>
                     </div>
 
-                    {# Formulario de alta/edición de sector #}
+                    {#Formulario de alta/edición de sector#}
                     <div class="card bg-body-tertiary border-0">
                         <div class="card-body">
                             <h3 class="h6 mb-3" id="tituloFormSector">

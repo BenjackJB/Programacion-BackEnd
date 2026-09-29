@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Detalle de un evento.
-   La ficha se renderiza en el servidor con los datos de `evento`;
-   la tabla de localidades/sectores la carga el JS vía GET {{ api_sectores }}.
-   ========================================================================== #}
+{#========================================================================== Detalle de un evento. La ficha se renderiza en el servidor con los datos de `evento`; la tabla de localidades/sectores la carga el JS vía GET {{ api_sectores }}. ==========================================================================#}
 
 {% block extra_css %}
 <style>
@@ -36,7 +32,7 @@
 <article>
     <header class="page-header mb-3">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            {# Badge de categoría y estado del evento (clases .badge-estado del base) #}
+            {#Badge de categoría y estado del evento (clases .badge-estado del base)#}
             <span class="badge badge-categoria">{{ evento.get_categoria_display }}</span>
             <span class="badge badge-estado {{ evento.estado }}">{{ evento.get_estado_display }}</span>
         </div>
@@ -105,9 +101,7 @@
     </div>
 </article>
 
-{# El JS rellena este contenedor con la tabla de sectores del evento.
-   Los data-* indican al JS el endpoint, el rol de la sesión y a dónde
-   enviar al usuario si aún no ha iniciado sesión. #}
+{#El JS rellena este contenedor con la tabla de sectores del evento. Los data-* indican al JS el endpoint, el rol de la sesión y a dónde enviar al usuario si aún no ha iniciado sesión.#}
 <section class="card mb-4"
          id="sectoresContainer"
          data-api="{{ api_sectores }}"

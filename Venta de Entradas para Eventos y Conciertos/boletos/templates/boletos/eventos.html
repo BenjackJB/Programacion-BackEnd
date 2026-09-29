@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Catálogo público de eventos.
-   El listado, los filtros y la paginación se cargan vía JavaScript contra
-   GET /api/eventos/ (ver boletos/static/js/eventos.js).
-   ========================================================================== #}
+{#========================================================================== Catálogo público de eventos. El listado, los filtros y la paginación se cargan vía JavaScript contra GET /api/eventos/ (ver boletos/static/js/eventos.js). ==========================================================================#}
 
 {% block content %}
 <!-- ============================ ENCABEZADO ============================ -->
@@ -21,7 +17,7 @@
             <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtrar eventos
         </h2>
 
-        {# Cada campo lleva el nombre del parámetro que espera el API. #}
+        {#Cada campo lleva el nombre del parámetro que espera el API.#}
         <form id="formFiltros" class="row g-3 align-items-end" role="search" aria-label="Filtros del catálogo">
             <!-- Búsqueda libre: nombre, artista o recinto -->
             <div class="col-12 col-md-4">
@@ -89,7 +85,7 @@
 <!-- ========================= RESULTADOS ========================= -->
 <section id="seccionResultados" data-api="{{ api_endpoint }}" aria-live="polite" aria-label="Resultados del catálogo">
     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4" id="gridEventos"></div>
-    {# La paginación se inyecta aquí (Boletos.paginacion). #}
+    {#La paginación se inyecta aquí (Boletos.paginacion).#}
     <div id="paginacionEventos"></div>
 </section>
 {% endblock %}

@@ -699,6 +699,33 @@ class VistasHTMLTests(BasePruebas):
             self.assertIn(PIE_DE_PAGINA, contenido, f'Falta pie de página en {nombre}')
             self.assertIn('/docs/', contenido, f'Falta enlace a documentación en {nombre}')
 
+    def test_ninguna_pantalla_muestra_comentarios_de_plantilla(self):
+        """Los comentarios {# #} de Django nunca deben verse en pantalla.
+
+        Un comentario `{# ... #}` escrito en varias líneas no lo reconoce el
+        motor de plantillas y el texto se filtra al usuario: esta prueba evita
+        que vuelva a ocurrir en cualquiera de las pantallas.
+        """
+        cliente = self.cliente_con_cookie(self.espectador)
+        organizador = self.cliente_con_cookie(self.organizador)
+        pantallas = {
+            'eventos': (nuevo_cliente(), reverse('eventos')),
+            'login': (nuevo_cliente(), reverse('login')),
+            'registro': (nuevo_cliente(), reverse('registro')),
+            'detalle': (nuevo_cliente(), reverse('evento-detalle', args=[self.evento.pk])),
+            'carro': (cliente, reverse('carro')),
+            'mis-entradas': (cliente, reverse('mis-entradas')),
+            'organizador-eventos': (organizador, reverse('organizador-eventos')),
+            'organizador-ventas': (organizador, reverse('organizador-ventas')),
+        }
+        for nombre, (cliente_pantalla, url) in pantallas.items():
+            contenido = cliente_pantalla.get(url, follow=True).content.decode()
+            self.assertNotIn('{#', contenido, f'Comentario de plantilla visible en {nombre}')
+            self.assertNotIn(
+                'El JS rellena este contenedor', contenido,
+                f'Comentario filtrado en {nombre}',
+            )
+
     def test_logout_elimina_las_cookies_de_sesion(self):
         cliente = self.cliente_con_cookie(self.espectador)
         respuesta = cliente.get(reverse('logout'))
@@ -720,6 +747,23 @@ class VistasHTMLTests(BasePruebas):
         self.assertIn('Benjamin Jaque', esquema)
         self.assertIn('IEC-N4-C2', esquema)
         self.assertIn('2026', esquema)
+
+    def test_enlace_falso_o_roto_redirige_al_inicio(self):
+        """Red de seguridad con re_path: una URL inexistente manda al catálogo."""
+        respuesta = nuevo_cliente().get('/pagina-que-no-existe/')
+        self.assertEqual(respuesta.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(respuesta.url, reverse('eventos'))
+
+    def test_enlace_roto_conserva_la_consulta(self):
+        """La red de seguridad mantiene los parámetros de la dirección original."""
+        respuesta = nuevo_cliente().get('/enlace-viejo/subpágina/?search=rock')
+        self.assertEqual(respuesta.status_code, status.HTTP_302_FOUND)
+        self.assertIn('search=rock', respuesta.url)
+
+    def test_el_api_no_usa_la_red_de_seguridad(self):
+        """Una ruta falsa del API sigue respondiendo 404 (nunca HTML redirigido)."""
+        respuesta = nuevo_cliente().get('/api/ruta-inexistente/')
+        self.assertEqual(respuesta.status_code, status.HTTP_404_NOT_FOUND)
 
 
 # =============================================================================

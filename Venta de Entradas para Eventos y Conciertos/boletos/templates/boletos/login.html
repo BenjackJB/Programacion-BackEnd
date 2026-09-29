@@ -1,11 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{# ==========================================================================
-   Pantalla de inicio de sesión.
-   Formulario centrado que envía las credenciales a POST /api/token/ desde
-   static/js/login.js y guarda la sesión JWT en cookies (Boletos.setSession).
-   ========================================================================== #}
+{#========================================================================== Pantalla de inicio de sesión. Formulario centrado que envía las credenciales a POST /api/token/ desde static/js/login.js y guarda la sesión JWT en cookies (Boletos.setSession). ==========================================================================#}
 {% block content %}
 <div class="container-fluid">
     <div class="card mx-auto my-5" style="max-width: 430px;">
@@ -14,7 +10,7 @@
         </div>
         <div class="card-body p-4">
 
-            {# next: ruta de retorno (viene del contexto de la vista o del query string) #}
+            {#next: ruta de retorno (viene del contexto de la vista o del query string)#}
             <form id="loginForm" data-next="{{ next|default:'' }}" novalidate>
 
                 <div class="mb-3">
@@ -36,7 +32,7 @@
                     </div>
                 </div>
 
-                {# Mensaje de error del API (credenciales inválidas, etc.) #}
+                {#Mensaje de error del API (credenciales inválidas, etc.)#}
                 <div id="loginError" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
 
                 <button type="submit" class="btn btn-accent w-100" id="btnIngresar">

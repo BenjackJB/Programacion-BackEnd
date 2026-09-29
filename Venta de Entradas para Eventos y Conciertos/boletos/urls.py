@@ -4,12 +4,15 @@ URLs de la app boletos.
 Agrupa:
 - Rutas de las vistas HTML (templates) del sistema.
 - Endpoints internos del API REST (JSON) consumidos por el frontend con JWT.
+- Una red de seguridad con re_path(): cualquier dirección falsa o rota que
+  escriba el usuario (o que deje un enlace viejo) redirige al catálogo.
 
 NO existen rutas de admin de Django ni un índice navegable del API:
 la única interfaz visible son las pantallas HTML y su documentación en /docs/.
 """
 
-from django.urls import path
+from django.urls import path, re_path
+from django.views.generic import RedirectView
 
 from . import api_views, views
 
@@ -140,5 +143,22 @@ urlpatterns = [
         'api/mis-entradas/<int:pk>/',
         api_views.MisEntradasViewSet.as_view({'get': 'retrieve'}),
         name='api-mis-entrada-detalle',
+    ),
+
+    # =========================================================================
+    # REDE DE SEGURIDAD (re_path): ENLACES FALSOS O ROTOS -> HOME
+    # =========================================================================
+    # Se coloca SIEMPRE al final: Django recorre las rutas de arriba hacia
+    # abajo, así que solo alcanza a esta expresión regular lo que ninguna otra
+    # ruta reclamó. Cualquier dirección inexistente (/cualquier-cosa/) redirige
+    # con 302 al catálogo de eventos y conserva la consulta (?search=...).
+    #
+    # Excepciones deliberadas (deben seguir respondiendo 404, no redirigir):
+    # - /api/...  : un endpoint del API no puede "rebotar" a una página HTML.
+    # - /admin/...: el admin de Django no existe en este proyecto.
+    re_path(
+        r'^(?!api/|admin/).*$',
+        RedirectView.as_view(pattern_name='eventos', permanent=False, query_string=True),
+        name='enlace-roto',
     ),
 ]

@@ -52,6 +52,9 @@ Usuarios de la semilla:
 
 Todas las pantallas muestran en el pie: **Benjamin Jaque • IEC-N4-C2 • 2026**.
 
+Cualquier dirección inexistente o rota redirige con `re_path` al catálogo (red de
+seguridad que conserva la consulta); `/api/...` y `/admin/...` responden 404.
+
 ## Endpoints del API (internos, JSON)
 
 * **Público:** `GET /api/eventos/`, `GET /api/eventos/{id}/sectores/`
@@ -92,6 +95,6 @@ boletos/
 $env:DB_ENGINE='sqlite'; python manage.py test boletos
 ```
 
-58 pruebas: JWT y claims de rol, permisos por rol, filtros, carro persistente,
+61 pruebas: JWT y claims de rol, permisos por rol, filtros, carro persistente,
 ciclo de vida de la orden con stock, SEÑALES de transición, vistas HTML,
-pie de página y ausencia de admin/API navegable.
+pie de página, red de seguridad de enlaces rotos y ausencia de admin/API navegable.
