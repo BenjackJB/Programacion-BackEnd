@@ -1,7 +1,7 @@
 {% extends 'boletos/base.html' %}
 {% load static %}
 
-{#========================================================================== Carro de compras del espectador (solo sesión JWT de espectador). El JS consulta GET /api/carro-tickets/ y maneja agregar/quitar ítems, vaciar el carro y pagar (POST /api/compras/pagar/). ==========================================================================#}
+{#========================================================================== Carro de compras del espectador (solo sesión JWT de espectador). El JS consulta GET /api/carro-tickets/ y maneja agregar/quitar ítems, vaciar el carro y pagar con Webpay Plus (POST /api/compras/webpay/iniciar/) o con el pago simulado (POST /api/compras/pagar/). ==========================================================================#}
 
 {% block content %}
 <!-- ============================ ENCABEZADO ============================ -->
@@ -14,6 +14,7 @@
 <div id="paginaCarro"
      data-api="{{ api_endpoint }}"
      data-pagar="{% url 'api-pagar' %}"
+     data-webpay="{% url 'api-webpay-iniciar' %}"
      data-mis-entradas="{% url 'mis-entradas' %}"
      data-catalogo="{% url 'eventos' %}">
 
@@ -43,8 +44,11 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-accent" id="btnPagar" disabled>
-                    <i class="bi bi-credit-card me-1" aria-hidden="true"></i>Pagar ahora
+                <button type="button" class="btn btn-accent" id="btnWebpay" disabled>
+                    <i class="bi bi-credit-card me-1" aria-hidden="true"></i>Pagar con Webpay
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="btnPagar" disabled>
+                    <i class="bi bi-lightning-charge me-1" aria-hidden="true"></i>Pago simulado
                 </button>
                 <button type="button" class="btn btn-outline-danger" id="btnVaciar" disabled>
                     <i class="bi bi-trash me-1" aria-hidden="true"></i>Vaciar carro

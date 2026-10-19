@@ -1,0 +1,104 @@
+{% extends 'boletos/base.html' %}
+
+{#========================================================================== Retorno desde el ambiente de pago de Webpay Plus: muestra el resultado del commit (aprobado / rechazado / cancelado / error) con las acciones siguientes. ==========================================================================#}
+
+{% block content %}
+<!-- ============================ ENCABEZADO ============================ -->
+<header class="page-header mb-4">
+    <h1>{{ encabezado }}</h1>
+    <p class="text-muted mb-0">Resultado de tu transacción con Transbank Webpay Plus.</p>
+</header>
+
+<section class="row justify-content-center">
+    <div class="col-lg-7">
+
+        {% if resultado == 'aprobado' %}
+        <!-- ===================== PAGO APROBADO ===================== -->
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle-fill text-success display-4" aria-hidden="true"></i>
+                <h2 class="h4 mt-3">¡Pago aprobado!</h2>
+                <p class="mb-2">Webpay confirmó tu pago y tus entradas ya están emitidas.</p>
+                {% if compra %}
+                <ul class="list-unstyled text-muted small text-start d-inline-block mb-0">
+                    <li><strong>Orden:</strong> #{{ compra.pk }}</li>
+                    <li><strong>Total pagado:</strong> $ {{ compra.total|floatformat:0 }}</li>
+                    <li><strong>Entradas emitidas:</strong> {{ compra.cantidad_tickets }}</li>
+                    {% if autorizacion %}<li><strong>Autorización Webpay:</strong> {{ autorizacion }}</li>{% endif %}
+                </ul>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                    <a class="btn btn-accent" href="{% url 'mis-entradas' %}">
+                        <i class="bi bi-ticket-detailed me-1" aria-hidden="true"></i>Ver mis entradas
+                    </a>
+                    <a class="btn btn-outline-primary" href="{% url 'eventos' %}">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Seguir comprando
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% elif resultado == 'rechazado' %}
+        <!-- ===================== PAGO RECHAZADO ===================== -->
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <i class="bi bi-x-circle-fill text-danger display-4" aria-hidden="true"></i>
+                <h2 class="h4 mt-3">Pago no completado</h2>
+                <p class="mb-2">{{ detalle }}</p>
+                {% if compra %}
+                <p class="text-muted small mb-0">
+                    La orden #{{ compra.pk }} sigue <strong>PENDIENTE</strong>: puedes intentarlo
+                    nuevamente desde tu carro sin perder tus reservas.
+                </p>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                    <a class="btn btn-accent" href="{% url 'carro' %}">
+                        <i class="bi bi-cart3 me-1" aria-hidden="true"></i>Volver al carro
+                    </a>
+                    <a class="btn btn-outline-primary" href="{% url 'eventos' %}">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Seguir comprando
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% elif resultado == 'cancelado' %}
+        <!-- ===================== PAGO CANCELADO ===================== -->
+        <div class="card border-secondary">
+            <div class="card-body text-center">
+                <i class="bi bi-pause-circle-fill text-secondary display-4" aria-hidden="true"></i>
+                <h2 class="h4 mt-3">Pago cancelado</h2>
+                <p class="mb-0">No se recibió ninguna transacción de Webpay. Tus entradas siguen reservadas en tu carro.</p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                    <a class="btn btn-accent" href="{% url 'carro' %}">
+                        <i class="bi bi-cart3 me-1" aria-hidden="true"></i>Volver al carro
+                    </a>
+                    <a class="btn btn-outline-primary" href="{% url 'eventos' %}">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Seguir comprando
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- ===================== ERROR DE CONFIRMACIÓN ===================== -->
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle-fill text-warning display-4" aria-hidden="true"></i>
+                <h2 class="h4 mt-3">No se pudo confirmar el pago</h2>
+                <p class="mb-0">{{ detalle|default:'Ocurrió un problema al consultar el estado de la transacción.' }}</p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+                    <a class="btn btn-accent" href="{% url 'carro' %}">
+                        <i class="bi bi-cart3 me-1" aria-hidden="true"></i>Volver al carro
+                    </a>
+                    <a class="btn btn-outline-primary" href="{% url 'eventos' %}">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Seguir comprando
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

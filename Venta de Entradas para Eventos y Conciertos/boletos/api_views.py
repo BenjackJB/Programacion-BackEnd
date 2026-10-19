@@ -3,7 +3,8 @@ Vistas del API REST (DRF) del sistema de venta de entradas.
 
 Endpoints principales (la documentación interactiva está en /docs/):
 - PÚBLICO      : GET  /api/eventos/  y  GET /api/eventos/{id}/sectores/
-- ESPECTADOR   : GET/POST/DELETE /api/carro-tickets/ , POST /api/compras/pagar/
+- ESPECTADOR   : GET/POST/DELETE /api/carro-tickets/ , POST /api/compras/pagar/ ,
+                 POST /api/compras/webpay/iniciar/ (Transbank Webpay Plus)
                  y GET /api/mis-entradas/
 - ORGANIZADOR  : POST/PUT/DELETE /api/eventos/ y PATCH /api/compras/{id}/estado/
 
@@ -14,6 +15,8 @@ templates mediante fetch() con token JWT (Authorization: Bearer <access>).
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Min, Q
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
@@ -41,7 +44,8 @@ from .serializers import (
     TokenConRolSerializer,
     UsuarioSerializer,
 )
-from .services import procesar_pago
+from .services import preparar_orden_webpay, procesar_pago
+from .webpay import ErrorWebpay, crear_transaccion
 
 
 # =============================================================================
@@ -295,6 +299,7 @@ class CompraViewSet(viewsets.ReadOnlyModelViewSet):
     GET   /api/compras/            -> ventas/órdenes (organizador) o las propias
     GET   /api/compras/{id}/       -> detalle de la orden con sus tickets
     POST  /api/compras/pagar/      -> checkout: valida stock, descuenta y emite tickets
+    POST  /api/compras/webpay/iniciar/ -> crea la orden y la transacción Webpay Plus
     PATCH /api/compras/{id}/estado/-> ENTREGADO / CANCELADO (organizador)
     """
 
@@ -321,11 +326,11 @@ class CompraViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Permisos por acción (la vista se enruta manualmente, por lo que se
         aplican aquí en lugar de los kwargs del decorador @action):
-        - pagar   : solo rol Espectador.
-        - estado  : solo rol Organizador.
-        - resto   : cualquier usuario autenticado (dueño de sus órdenes).
+        - pagar / webpay_iniciar : solo rol Espectador.
+        - estado                 : solo rol Organizador.
+        - resto                  : cualquier usuario autenticado (dueño de sus órdenes).
         """
-        if self.action == 'pagar':
+        if self.action in ('pagar', 'webpay_iniciar'):
             return [EsEspectador()]
         if self.action == 'estado':
             return [EsOrganizador()]
@@ -336,6 +341,40 @@ class CompraViewSet(viewsets.ReadOnlyModelViewSet):
         """POST /api/compras/pagar/ - confirma el pedido y procesa el pago."""
         compra = procesar_pago(request.user, request.data.get('observacion', ''))
         return Response(CompraSerializer(compra).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='webpay/iniciar')
+    def webpay_iniciar(self, request):
+        """
+        POST /api/compras/webpay/iniciar/
+
+        Prepara la orden PENDIENTE con el snapshot del carro y crea la
+        transacción en el ambiente de integración de Webpay Plus. Devuelve
+        {token, url, compra}: el JavaScript arma un formulario POST con
+        `token_ws` hacia `url` y redirige al navegador al sitio de pago.
+        """
+        compra = preparar_orden_webpay(request.user)
+
+        # buy_order única por intento (máx. 26 caracteres según Transbank).
+        buy_order = f'OC{compra.pk}-{int(timezone.now().timestamp() * 1000)}'
+        session_id = f'C{compra.pk}U{request.user.pk}'
+        return_url = request.build_absolute_uri(reverse('webpay-retorno'))
+
+        try:
+            token, url_pago = crear_transaccion(
+                buy_order=buy_order,
+                session_id=session_id,
+                amount=float(compra.total),
+                return_url=return_url,
+            )
+        except ErrorWebpay as exc:
+            raise ValidationError({'webpay': str(exc)})
+
+        compra.token_webpay = token
+        compra.save(update_fields=['token_webpay', 'fecha_actualizacion'])
+        return Response(
+            {'token': token, 'url': url_pago, 'compra': compra.pk},
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=['patch'], url_path='estado')
     def estado(self, request, pk=None):

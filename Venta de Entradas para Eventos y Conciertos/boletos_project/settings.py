@@ -137,6 +137,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+# Destino de collectstatic (servido por Nginx en el despliegue EC2)
+STATIC_ROOT = BASE_DIR / 'static'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -215,3 +217,20 @@ SIMPLE_JWT = {
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'eventos'
 LOGOUT_REDIRECT_URL = 'login'
+
+# =============================================================================
+# TRANSBANK WEBPAY PLUS (ambiente de integración / sandbox)
+# Credenciales públicas de prueba publicadas por Transbank (no requieren
+# cuenta real). Se pueden sobreescribir por variables de entorno para
+# cambiar de ambiente (integración -> producción) sin tocar el código.
+# =============================================================================
+
+WEBPAY = {
+    'BASE_URL': os.environ.get('WEBPAY_BASE_URL', 'https://webpay3gint.transbank.cl'),
+    'CODIGO_COMERCIO': os.environ.get('WEBPAY_CODIGO_COMERCIO', '597055555532'),
+    'API_KEY': os.environ.get(
+        'WEBPAY_API_KEY',
+        '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C',
+    ),
+    'TIMEOUT': int(os.environ.get('WEBPAY_TIMEOUT', '20')),
+}

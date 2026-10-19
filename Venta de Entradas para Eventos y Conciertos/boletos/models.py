@@ -455,6 +455,21 @@ class Compra(BaseModel):
     total = models.DecimalField(max_digits=12, decimal_places=0, default=0, verbose_name='Total (CLP)')
     fecha_pago = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de pago')
     observacion = models.CharField(max_length=255, blank=True, verbose_name='Observación')
+    # Pago con Transbank Webpay Plus: token de la transacción (para localizar
+    # la orden al volver del ambiente de pago) y snapshot de los ítems a
+    # facturar, de modo que la señal de PAGADO facture exactamente lo que se
+    # ofreció aunque el usuario haya modificado el carro durante el pago.
+    token_webpay = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name='Token de la transacción Webpay',
+    )
+    items_pago = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name='Detalle de ítems a facturar (snapshot JSON)',
+    )
 
     class Meta:
         db_table = 'compra'

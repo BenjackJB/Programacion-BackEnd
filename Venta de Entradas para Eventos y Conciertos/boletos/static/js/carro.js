@@ -6,7 +6,9 @@
  * - "Agregar 1" -> POST {sector, cantidad:1} (el API suma al ítem existente).
  * - "Quitar ítem" -> DELETE /api/carro-tickets/{id}/.
  * - "Vaciar carro" -> DELETE /api/carro-tickets/ (con confirmación previa).
- * - "Pagar ahora" -> POST /api/compras/pagar/ y redirigir a mis entradas.
+ * - "Pagar con Webpay" -> POST /api/compras/webpay/iniciar/ y envío del
+ *   formulario con token_ws hacia la URL de pago de Transbank.
+ * - "Pago simulado" -> POST /api/compras/pagar/ y redirigir a mis entradas.
  */
 (function () {
     'use strict';
@@ -21,11 +23,13 @@
     const contenido = document.getElementById('carroContenido');
     const resumenEntradas = document.getElementById('resumenEntradas');
     const resumenTotal = document.getElementById('resumenTotal');
+    const btnWebpay = document.getElementById('btnWebpay');
     const btnPagar = document.getElementById('btnPagar');
     const btnVaciar = document.getElementById('btnVaciar');
 
     const API_CARRO = pagina.dataset.api;
     const API_PAGAR = pagina.dataset.pagar;
+    const API_WEBPAY = pagina.dataset.webpay;
     const URL_MIS_ENTRADAS = pagina.dataset.misEntradas || '/mis-entradas/';
     const URL_CATALOGO = pagina.dataset.catalogo || '/eventos/';
 
@@ -105,6 +109,7 @@
 
         contenido.innerHTML = vacio ? estadoVacioCarro() : tablaItems(items);
 
+        btnWebpay.disabled = vacio || pagando;
         btnPagar.disabled = vacio || pagando;
         btnVaciar.disabled = vacio;
     }
@@ -125,6 +130,7 @@
                 'No se pudo cargar tu carro',
                 mensaje
             );
+            btnWebpay.disabled = true;
             btnPagar.disabled = true;
             btnVaciar.disabled = true;
             Boletos.toast('danger', mensaje);
@@ -194,10 +200,12 @@
     /**
      * POST /api/compras/pagar/: emite los tickets (descuenta stock) y
      * redirige a "Mis entradas" después de mostrar el toast de éxito.
+     * (Pago simulado de demostración, alternativa al pago con Webpay.)
      */
     async function pagar() {
         if (pagando) return;
         pagando = true;
+        btnWebpay.disabled = true;
         btnPagar.disabled = true;
         btnVaciar.disabled = true;
 
@@ -219,9 +227,48 @@
             if (err && err.status === 400) {
                 await cargarCarro();
             } else {
+                btnWebpay.disabled = false;
                 btnPagar.disabled = false;
                 btnVaciar.disabled = false;
             }
+        }
+    }
+
+    /**
+     * POST /api/compras/webpay/iniciar/: crea la orden PENDIENTE y la
+     * transacción en el ambiente de integración de Webpay Plus, y envía el
+     * navegador a la página de pago de Transbank mediante un formulario POST
+     * con el campo `token_ws`. El resultado vuelve a /pagos/webpay/retorno/.
+     */
+    async function pagarWebpay() {
+        if (pagando) return;
+        pagando = true;
+        btnWebpay.disabled = true;
+        btnPagar.disabled = true;
+        btnVaciar.disabled = true;
+
+        const htmlOriginal = btnWebpay.innerHTML;
+        btnWebpay.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Abriendo Webpay…';
+
+        try {
+            const transaccion = await Boletos.apiPost(API_WEBPAY, {});
+            // Formulario invisible: POST con token_ws hacia la URL de Webpay.
+            const formulario = document.createElement('form');
+            formulario.method = 'POST';
+            formulario.action = transaccion.url;
+            const campo = document.createElement('input');
+            campo.type = 'hidden';
+            campo.name = 'token_ws';
+            campo.value = transaccion.token;
+            formulario.appendChild(campo);
+            document.body.appendChild(formulario);
+            formulario.submit();
+        } catch (err) {
+            const mensaje = (err && err.message) || Boletos.extraerMensaje(err);
+            Boletos.toast('danger', mensaje);
+            pagando = false;
+            btnWebpay.innerHTML = htmlOriginal;
+            await cargarCarro();
         }
     }
 
@@ -239,6 +286,7 @@
         if (btnQuitar) quitarItem(btnQuitar);
     });
 
+    btnWebpay.addEventListener('click', pagarWebpay);
     btnPagar.addEventListener('click', pagar);
     btnVaciar.addEventListener('click', vaciarCarro);
 

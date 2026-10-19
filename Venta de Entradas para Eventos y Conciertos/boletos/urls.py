@@ -27,6 +27,7 @@ urlpatterns = [
     path('registro/', views.RegistroView.as_view(), name='registro'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('carro/', views.CarroView.as_view(), name='carro'),
+    path('pagos/webpay/retorno/', views.WebpayRetornoView.as_view(), name='webpay-retorno'),
     path('mis-entradas/', views.MisEntradasView.as_view(), name='mis-entradas'),
     path('organizador/eventos/', views.OrganizadorEventosView.as_view(), name='organizador-eventos'),
     path('organizador/ventas/', views.OrganizadorVentasView.as_view(), name='organizador-ventas'),
@@ -119,6 +120,11 @@ urlpatterns = [
         'api/compras/pagar/',
         api_views.CompraViewSet.as_view({'post': 'pagar'}),
         name='api-pagar',
+    ),
+    path(
+        'api/compras/webpay/iniciar/',
+        api_views.CompraViewSet.as_view({'post': 'webpay_iniciar'}),
+        name='api-webpay-iniciar',
     ),
     path(
         'api/compras/<int:pk>/',

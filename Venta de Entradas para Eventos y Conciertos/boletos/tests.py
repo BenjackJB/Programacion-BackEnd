@@ -689,6 +689,7 @@ class VistasHTMLTests(BasePruebas):
             'registro': (nuevo_cliente(), reverse('registro')),
             'detalle': (nuevo_cliente(), reverse('evento-detalle', args=[self.evento.pk])),
             'carro': (cliente, reverse('carro')),
+            'webpay-retorno': (nuevo_cliente(), reverse('webpay-retorno')),
             'mis-entradas': (cliente, reverse('mis-entradas')),
             'organizador-eventos': (organizador, reverse('organizador-eventos')),
             'organizador-ventas': (organizador, reverse('organizador-ventas')),
@@ -715,6 +716,7 @@ class VistasHTMLTests(BasePruebas):
             'registro': (nuevo_cliente(), reverse('registro')),
             'detalle': (nuevo_cliente(), reverse('evento-detalle', args=[self.evento.pk])),
             'carro': (cliente, reverse('carro')),
+            'webpay-retorno': (nuevo_cliente(), reverse('webpay-retorno')),
             'mis-entradas': (cliente, reverse('mis-entradas')),
             'organizador-eventos': (organizador, reverse('organizador-eventos')),
             'organizador-ventas': (organizador, reverse('organizador-ventas')),
@@ -905,3 +907,191 @@ class SenalesDeTransicionTests(BasePruebas):
         self.assertEqual(
             set(compra.tickets.values_list('estado', flat=True)), {Ticket.Estado.INGRESADO}
         )
+
+
+# =============================================================================
+# 10. PAGO EN LÍNEA CON TRANSBANK WEBPAY PLUS
+# =============================================================================
+
+class WebpayTests(BasePruebas):
+    """Flujo Webpay Plus: iniciar, retorno aprobado, declinado y cancelado.
+
+    Las llamadas HTTP al API de Transbank se simulan con mock.patch: la suite
+    nunca contacta con el ambiente de integración real.
+    """
+
+    TOKEN = 'tbk-token-de-prueba'
+    URL_PAGO = 'https://webpay3gint.transbank.cl/webpayserver/initTransaction'
+
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_iniciar_webpay_crea_orden_pendiente_sin_descontar_stock(self, crear):
+        """POST /api/compras/webpay/iniciar/: orden PENDIENTE + token, sin efectos."""
+        crear.return_value = (self.TOKEN, self.URL_PAGO)
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=2)
+
+        respuesta = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+        self.assertEqual(respuesta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(respuesta.data['token'], self.TOKEN)
+        self.assertEqual(respuesta.data['url'], self.URL_PAGO)
+
+        compra = Compra.objects.get(pk=respuesta.data['compra'])
+        self.assertEqual(compra.estado, Compra.Estado.PENDIENTE)
+        self.assertEqual(compra.token_webpay, self.TOKEN)
+        self.assertEqual(compra.items_pago, [{'sector_id': self.sector.pk, 'cantidad': 2}])
+        self.assertIsNone(compra.fecha_pago)
+
+        # Parámetros exigidos por Transbank (buy_order única, monto en CLP).
+        argumentos = crear.call_args.kwargs
+        self.assertLessEqual(len(argumentos['buy_order']), 26)
+        self.assertEqual(argumentos['amount'], 20000.0)
+
+        # Crear la transacción NO descuenta stock ni emite tickets.
+        self.sector.refresh_from_db()
+        self.assertEqual(self.sector.stock_disponible, 50)
+        self.assertEqual(Ticket.objects.count(), 0)
+
+    def test_webpay_exige_carro_y_rol_espectador(self):
+        """Carro vacío -> 400; organizador no puede iniciar pagos -> 403."""
+        cliente = self.cliente_jwt(self.espectador)
+        vacio = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+        self.assertEqual(vacio.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('carro', vacio.data)
+
+        organizador = self.cliente_jwt(self.organizador)
+        ajeno = organizador.post('/api/compras/webpay/iniciar/', {}, format='json')
+        self.assertEqual(ajeno.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Compra.objects.count(), 0)
+
+    @mock.patch('boletos.views.confirmar_transaccion')
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_retorno_aprobado_paga_emite_tickets_y_vacia_carro(self, crear, confirmar):
+        """El commit AUTHORIZED pasa la orden a PAGADO (stock + tickets)."""
+        crear.return_value = (self.TOKEN, self.URL_PAGO)
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=2)
+        inicio = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+        self.assertEqual(inicio.status_code, status.HTTP_201_CREATED)
+
+        confirmar.return_value = {
+            'status': 'AUTHORIZED', 'response_code': 0, 'authorization_code': '5551234',
+        }
+        respuesta = cliente.get(f'/pagos/webpay/retorno/?token_ws={self.TOKEN}')
+
+        self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
+        contenido = respuesta.content.decode()
+        self.assertIn('Pago aprobado', contenido)
+        self.assertIn(PIE_DE_PAGINA, contenido)
+
+        compra = Compra.objects.get(pk=inicio.data['compra'])
+        self.assertEqual(compra.estado, Compra.Estado.PAGADO)
+        self.assertIsNotNone(compra.fecha_pago)
+        self.assertEqual(compra.historial.count(), 2)  # PENDIENTE y PAGADO auditados
+
+        self.sector.refresh_from_db()
+        self.assertEqual(self.sector.stock_disponible, 48)
+        self.assertEqual(Ticket.objects.count(), 2)
+        self.assertEqual(
+            set(compra.tickets.values_list('estado', flat=True)),
+            {Ticket.Estado.VALIDO},
+        )
+        self.assertEqual(
+            CarroItem.all_objects.filter(carro__usuario=self.espectador).count(), 0
+        )
+        confirmar.assert_called_once()
+
+        # Doble retorno de Webpay: idempotente (no vende dos veces).
+        repetido = cliente.get(f'/pagos/webpay/retorno/?token_ws={self.TOKEN}')
+        self.assertEqual(repetido.status_code, status.HTTP_200_OK)
+        self.assertEqual(Ticket.objects.count(), 2)
+        self.sector.refresh_from_db()
+        self.assertEqual(self.sector.stock_disponible, 48)
+
+    @mock.patch('boletos.views.confirmar_transaccion')
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_retorno_rechazado_mantiene_la_orden_pendiente(self, crear, confirmar):
+        """Un commit no aprobado deja la orden PENDIENTE con el carro intacto."""
+        crear.return_value = (self.TOKEN, self.URL_PAGO)
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=2)
+        inicio = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+
+        confirmar.return_value = {'status': 'REJECTED', 'response_code': -1}
+        respuesta = cliente.get(f'/pagos/webpay/retorno/?token_ws={self.TOKEN}')
+
+        self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
+        self.assertIn('Pago no completado', respuesta.content.decode())
+
+        compra = Compra.objects.get(pk=inicio.data['compra'])
+        self.assertEqual(compra.estado, Compra.Estado.PENDIENTE)
+        self.assertIsNone(compra.fecha_pago)
+        self.sector.refresh_from_db()
+        self.assertEqual(self.sector.stock_disponible, 50)
+        self.assertEqual(Ticket.objects.count(), 0)
+        # El carro conserva la reserva (1 ítem con cantidad 2, sin vaciar).
+        reservadas = CarroItem.all_objects.filter(carro__usuario=self.espectador, activo=True)
+        self.assertEqual(sum(item.cantidad for item in reservadas), 2)
+
+    @mock.patch('boletos.views.confirmar_transaccion')
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_retorno_post_declina_el_pago(self, crear, _confirmar):
+        """Webpay avisa un pago declinado por POST (TBK_TOKEN): sin efectos."""
+        crear.return_value = (self.TOKEN, self.URL_PAGO)
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=1)
+        inicio = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+
+        respuesta = cliente.post('/pagos/webpay/retorno/', {'TBK_TOKEN': self.TOKEN})
+        self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
+        self.assertIn('Pago no completado', respuesta.content.decode())
+
+        compra = Compra.objects.get(pk=inicio.data['compra'])
+        self.assertEqual(compra.estado, Compra.Estado.PENDIENTE)
+        self.assertEqual(Ticket.objects.count(), 0)
+
+    def test_retorno_sin_token_muestra_la_pantalla_de_cancelacion(self):
+        """GET sin token_ws: pantalla de pago cancelado con pie del alumno."""
+        respuesta = nuevo_cliente().get('/pagos/webpay/retorno/')
+        self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
+        contenido = respuesta.content.decode()
+        self.assertIn('Pago cancelado', contenido)
+        self.assertIn(PIE_DE_PAGINA, contenido)
+        self.assertEqual(Compra.objects.count(), 0)
+
+    @mock.patch('boletos.views.confirmar_transaccion')
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_retorno_sin_stock_no_factura_y_no_toca_el_inventario(self, crear, confirmar):
+        """Pago aprobado sin cupos: la señal falla y la orden queda PENDIENTE."""
+        crear.return_value = (self.TOKEN, self.URL_PAGO)
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=5)
+        inicio = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+
+        # Mientras el usuario pagaba, el sector se agotó.
+        Sector.objects.filter(pk=self.sector.pk).update(stock_total=1, stock_disponible=1)
+        confirmar.return_value = {'status': 'AUTHORIZED', 'response_code': 0}
+        respuesta = cliente.get(f'/pagos/webpay/retorno/?token_ws={self.TOKEN}')
+
+        self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
+        contenido = respuesta.content.decode()
+        self.assertIn('No se pudo confirmar el pago', contenido)
+        self.assertIn('Stock insuficiente', contenido)
+
+        compra = Compra.objects.get(pk=inicio.data['compra'])
+        self.assertEqual(compra.estado, Compra.Estado.PENDIENTE)  # rollback
+        self.sector.refresh_from_db()
+        self.assertEqual(self.sector.stock_disponible, 1)
+        self.assertEqual(Ticket.objects.count(), 0)
+
+    @mock.patch('boletos.api_views.crear_transaccion')
+    def test_error_de_webpay_se_reporta_como_400(self, crear):
+        """Si Transbank no responde, el endpoint informa el detalle (400)."""
+        from .webpay import ErrorWebpay
+
+        crear.side_effect = ErrorWebpay('No fue posible contactar con Webpay: timeout')
+        cliente = self.cliente_jwt(self.espectador)
+        self.agregar_al_carro(cliente, cantidad=1)
+
+        respuesta = cliente.post('/api/compras/webpay/iniciar/', {}, format='json')
+        self.assertEqual(respuesta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('webpay', respuesta.data)

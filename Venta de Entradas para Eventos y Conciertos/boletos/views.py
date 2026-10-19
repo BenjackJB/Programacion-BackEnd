@@ -10,14 +10,17 @@ guardado en cookie (`access_token`) al momento de iniciar sesión.
 
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView
 
+from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .models import Evento
+from .models import Compra, Evento
+from .services import confirmar_pago_webpay
+from .webpay import ErrorWebpay, confirmar_transaccion
 
 
 # =============================================================================
@@ -207,6 +210,108 @@ class MisEntradasView(RequiereSesionJWT):
             'api_endpoint': '/api/mis-entradas/',
         })
         return context
+
+
+# =============================================================================
+# PAGO EN LÍNEA - RETORNO DESDE TRANSBANK WEBPAY PLUS
+# =============================================================================
+
+def _detalle_de_error(exc):
+    """Convierte una ValidationError de DRF en un mensaje legible."""
+    detalle = getattr(exc, 'detail', exc)
+    if isinstance(detalle, dict):
+        partes = []
+        for clave, valor in detalle.items():
+            valores = valor if isinstance(valor, (list, tuple)) else [valor]
+            partes.append(f'{clave}: ' + ', '.join(str(v) for v in valores))
+        return ' | '.join(partes)
+    if isinstance(detalle, (list, tuple)):
+        return ', '.join(str(v) for v in detalle)
+    return str(detalle)
+
+
+class WebpayRetornoView(MixinContextoJWT, View):
+    """
+    Retorno del navegador desde el ambiente de pago de Webpay Plus.
+
+    - GET  /pagos/webpay/retorno/?token_ws=... : pago intentado; Webpay
+      confirma la transacción (commit) y, si está AUTHORIZED con
+      response_code 0, la orden pasa a PAGADO (señal: stock + tickets).
+    - POST /pagos/webpay/retorno/ (TBK_TOKEN)  : Webpay avisa que el pago fue
+      declinado o abortado por el usuario: la orden queda PENDIENTE.
+
+    La pantalla no exige sesión (Webpay redirige el navegador) y muestra el
+    pie de página del alumno como el resto del sistema.
+    """
+
+    template_name = 'boletos/webpay_retorno.html'
+
+    def get(self, request, *args, **kwargs):
+        token = request.GET.get('token_ws', '')
+        if not token:
+            # Retorno sin token: el usuario canceló antes de ir a Webpay.
+            return self._render(request, {'resultado': 'cancelado'})
+        try:
+            datos = confirmar_transaccion(token)
+        except ErrorWebpay as exc:
+            return self._render(request, {'resultado': 'error', 'detalle': str(exc)})
+        return self._render(request, self._evaluar(token, datos))
+
+    def post(self, request, *args, **kwargs):
+        # Webpay retorna por POST cuando el pago es declinado o abortado.
+        token = request.POST.get('TBK_TOKEN', '')
+        compra = Compra.all_objects.filter(token_webpay=token).first() if token else None
+        return self._render(request, {
+            'resultado': 'rechazado',
+            'compra': compra,
+            'detalle': 'El pago fue rechazado o cancelado en la página de Webpay.',
+        })
+
+    def _evaluar(self, token, datos):
+        """Interpreta el resultado del commit y confirma la orden si aplica."""
+        compra = Compra.all_objects.filter(token_webpay=token).first()
+        if compra is None:
+            return {'resultado': 'error', 'detalle': 'Transacción Webpay no encontrada.'}
+
+        aprobado = datos.get('status') == 'AUTHORIZED' and datos.get('response_code') in (0, '0')
+        if not aprobado:
+            return {
+                'resultado': 'rechazado',
+                'compra': compra,
+                'codigo': datos.get('response_code'),
+                'detalle': f"Webpay respondió status={datos.get('status')} "
+                           f"con código {datos.get('response_code')}.",
+            }
+
+        try:
+            confirmar_pago_webpay(compra)
+        except ValidationError as exc:
+            # Orden pagada en Webpay pero sin stock: no se facturan tickets
+            # y la orden queda PENDIENTE para que el organizador la revise.
+            return {
+                'resultado': 'error',
+                'compra': compra,
+                'detalle': f'El pago se cobró pero no se pudieron emitir las entradas: '
+                           f'{_detalle_de_error(exc)}',
+            }
+        return {
+            'resultado': 'aprobado',
+            'compra': compra,
+            'autorizacion': datos.get('authorization_code', ''),
+        }
+
+    def _render(self, request, contexto):
+        """Renderiza la pantalla inyectando el usuario JWT (patrón del mixin)."""
+        usuario = obtener_usuario_jwt(request)
+        contexto.update({
+            'titulo': 'Resultado del pago con Webpay',
+            'encabezado': 'Pago con Webpay',
+            'usuario_jwt': usuario,
+            'es_organizador': bool(usuario and usuario.es_organizador),
+        })
+        if usuario:
+            contexto['nombre_usuario'] = usuario.nombre_completo
+        return render(request, self.template_name, contexto)
 
 
 # =============================================================================
