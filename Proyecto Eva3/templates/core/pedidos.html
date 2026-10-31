@@ -1,0 +1,70 @@
+{% extends "core/base.html" %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Pedidos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Cotización y registro</span>
+    <h1>Pedidos</h1>
+    <p class="muted" style="margin:0">Pedidos personalizados con diseño, ingredientes y fecha de entrega.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:kanban' %}">Ver Kanban</a>
+    <a class="btn btn--primary" href="{% url 'admin:core_pedido_add' %}">+ Nuevo pedido</a>
+  </div>
+</div>
+
+<form class="filters" data-autosubmit method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por número, cliente o diseño…">
+  <div class="chips">
+    <a class="pill pill--sm {% if not estado_activa %}pill--active{% endif %}" href="?">Todos</a>
+    {% for clave, etiqueta in estados %}
+      <a class="pill pill--sm {% if estado_activa == clave %}pill--active{% endif %}"
+         href="?estado={{ clave }}">{{ etiqueta }}</a>
+    {% endfor %}
+  </div>
+</form>
+
+{% if pedidos %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Número</th><th>Cliente</th><th>Diseño</th><th>Prioridad</th>
+        <th>Entrega</th><th>Estado</th><th>Despacho</th><th>Total</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in pedidos %}
+      <tr>
+        <td class="mono">{{ p.numero }}</td>
+        <td><a href="{{ p.get_absolute_url }}">{{ p.cliente.nombre }}</a></td>
+        <td class="soft" style="max-width:260px">{{ p.descripcion_diseño|truncatechars:70 }}</td>
+        <td>{{ p.prioridad|prioridad_badge }}</td>
+        <td class="nowrap">
+          {{ p.fecha_entrega|date:"d/m/Y H:i" }}
+          {% if p.atrasado %}<span class="badge badge--red" style="margin-left:6px">Atrasado</span>{% endif %}
+        </td>
+        <td>{{ p.estado|estado_badge }}</td>
+        <td>{{ p.estado_despacho|estado_despacho_badge }}</td>
+        <td class="mono nowrap">${{ p.total|floatformat:0|intcomma }}</td>
+        <td class="right nowrap">
+          <a class="pill pill--sm" href="{{ p.get_absolute_url }}">Detalle</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty__icon">🎂</div>
+  <h3>No hay pedidos{% if q %} para “{{ q }}”{% endif %}</h3>
+  <p>Registra el primer pedido personalizado desde el administrador.</p>
+  <a class="btn btn--primary" href="{% url 'admin:core_pedido_add' %}">Crear pedido</a>
+</div>
+{% endif %}
+{% endblock %}

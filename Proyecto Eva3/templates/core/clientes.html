@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}Clientes{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Cartera</span>
+    <h1>Clientes</h1>
+    <p class="muted" style="margin:0">Clientes de la pastelería y su historial de pedidos.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn--primary" href="{% url 'admin:core_cliente_add' %}">+ Nuevo cliente</a>
+  </div>
+</div>
+
+<form class="filters" data-autosubmit method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, correo o teléfono…">
+</form>
+
+{% if clientes %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr><th>Cliente</th><th>Correo</th><th>Teléfono</th><th>Comuna</th><th class="right">Pedidos</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in clientes %}
+      <tr>
+        <td><a href="{{ c.get_absolute_url }}"><b>{{ c.nombre }}</b></a></td>
+        <td class="muted">{{ c.email|default:"—" }}</td>
+        <td class="mono nowrap">{{ c.telefono|default:"—" }}</td>
+        <td>{{ c.comuna|default:"—" }}</td>
+        <td class="right mono">{{ c.pedidos.count }}</td>
+        <td class="right"><a class="pill pill--sm" href="{{ c.get_absolute_url }}">Ver ficha</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty__icon">🧑‍🍳</div>
+  <h3>Sin clientes{% if q %} para “{{ q }}”{% endif %}</h3>
+  <a class="btn btn--primary" href="{% url 'admin:core_cliente_add' %}">Crear cliente</a>
+</div>
+{% endif %}
+{% endblock %}

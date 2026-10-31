@@ -1,0 +1,59 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}Catálogo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Lista de materiales</span>
+    <h1>Catálogo de productos</h1>
+    <p class="muted" style="margin:0">Cada producto declara su BOM: insumos y cantidades para producirlo.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn--primary" href="{% url 'admin:core_producto_add' %}">+ Nuevo producto</a>
+  </div>
+</div>
+
+<form class="filters" data-autosubmit method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar producto…">
+  <div class="chips">
+    <a class="pill pill--sm {% if not categoria_activa %}pill--active{% endif %}" href="?">Todas</a>
+    {% for c in categorias %}
+      <a class="pill pill--sm {% if categoria_activa == c.id|stringformat:'s' %}pill--active{% endif %}"
+         href="?categoria={{ c.id }}">{{ c.nombre }}</a>
+    {% endfor %}
+  </div>
+</form>
+
+{% if productos %}
+<div class="grid grid--3">
+  {% for p in productos %}
+  <article class="prod">
+    <div class="prod__thumb">{{ p.imagen|default:"🍰" }}</div>
+    <div class="prod__body">
+      <span class="prod__cat">{{ p.categoria.nombre }}</span>
+      <h3 class="prod__name">{{ p.nombre }}</h3>
+      <p class="prod__desc">{{ p.descripcion|default:"Sin descripción."|truncatechars:90 }}</p>
+      <div class="row row--between">
+        <span class="prod__price">${{ p.precio_base|floatformat:0|intcomma }}</span>
+        {% if not p.activo %}<span class="badge badge--gray">Inactivo</span>{% endif %}
+      </div>
+      <div class="mono muted" style="font-size:12px">
+        BOM: {{ p.componentes.all|length }} insumo{{ p.componentes.all|length|pluralize }}
+        · costo ${{ p.costo_insumos|floatformat:0|intcomma }}
+      </div>
+      <a class="pill pill--sm" href="{{ p.get_absolute_url }}" style="align-self:flex-start">Ver ficha →</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty__icon">🧁</div>
+  <h3>Sin productos{% if q %} para “{{ q }}”{% endif %}</h3>
+  <p>Crea el primero desde el administrador.</p>
+  <a class="btn btn--primary" href="{% url 'admin:core_producto_add' %}">Crear producto</a>
+</div>
+{% endif %}
+{% endblock %}

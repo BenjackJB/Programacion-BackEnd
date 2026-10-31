@@ -1,0 +1,103 @@
+{% extends "core/base.html" %}
+{% block title %}Sistema de diseño{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Referencia visual</span>
+    <h1>Sistema de diseño</h1>
+    <p class="muted" style="margin:0">Paleta y componentes usados en toda la interfaz de Dulce Arte.</p>
+  </div>
+  <div class="page-head__actions"><a class="btn" href="{% url 'core:inicio' %}">← Volver al panel</a></div>
+</div>
+
+<section class="section">
+  <h2>Paleta</h2>
+  <div class="grid grid--4">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="height:78px;background:#fff5e6;border-bottom:1px solid #000"></div>
+      <div style="padding:14px">
+        <b>Cream Linen</b><div class="mono muted">#fff5e6 · lienzo</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="height:78px;background:#fa7864;border-bottom:1px solid #000"></div>
+      <div style="padding:14px">
+        <b>Coral Pop</b><div class="mono muted">#fa7864 · acción</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="height:78px;background:#dc8264;border-bottom:1px solid #000"></div>
+      <div style="padding:14px">
+        <b>Terracotta</b><div class="mono muted">#dc8264 · acento</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="height:78px;background:#000;border-bottom:1px solid #000"></div>
+      <div style="padding:14px">
+        <b>Ink Black</b><div class="mono muted">#000000 · tinta</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section--tight">
+  <h2>Botones</h2>
+  <div class="row" style="gap:14px">
+    <button class="btn btn--primary">Primario coral</button>
+    <button class="btn">Secundario</button>
+    <button class="btn btn--ghost">Terracotta</button>
+    <a class="pill pill--active" href="#">Pill activo</a>
+    <a class="pill" href="#">Pill</a>
+    <a class="pill pill--quiet pill--sm" href="#">Quiet</a>
+  </div>
+</section>
+
+<section class="section--tight">
+  <h2>Etiquetas de estado</h2>
+  <div class="row" style="gap:10px">
+    <span class="badge badge--gray">Recibido</span>
+    <span class="badge badge--terra">En Preparación</span>
+    <span class="badge badge--coral">Horneado</span>
+    <span class="badge badge--ink">Control</span>
+    <span class="badge badge--green">Listo</span>
+    <span class="badge badge--red">Atrasado</span>
+    <span class="badge badge--outline">Outline</span>
+  </div>
+</section>
+
+<section class="section--tight">
+  <h2>Tipografía</h2>
+  <div class="card stack">
+    <div>
+      <span class="eyebrow" style="margin-bottom:6px">Eyebrow mono coral</span>
+      <div style="font-family:var(--font-display);font-size:2.6rem">Instrument Serif — titular</div>
+    </div>
+    <div style="font-family:var(--font-sans);font-size:17px">
+      Space Grotesk — cuerpo de texto en 400, sin negritas: la jerarquía la dan el serif, el color o el salto de tamaño.
+    </div>
+    <div class="mono" style="font-size:14px">JetBrains Mono — metadatos, números y etiquetas</div>
+  </div>
+</section>
+
+<section class="section--tight">
+  <h2>Formularios</h2>
+  <div class="card" style="max-width:560px">
+    <div class="form-row">
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" placeholder="Ej: Torta de chocolate">
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date">
+      </div>
+    </div>
+    <div class="field">
+      <label>Descripción</label>
+      <textarea placeholder="Detalles…"></textarea>
+      <span class="helptext">Los campos usan borde negro de 1px y foco coral.</span>
+    </div>
+    <button class="btn btn--primary">Guardar</button>
+  </div>
+</section>
+{% endblock %}

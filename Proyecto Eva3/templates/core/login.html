@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Iniciar sesión{% endblock %}
+{% block body_class %}body--auth{% endblock %}
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<div class="auth">
+  <aside class="auth__aside">
+    <div>
+      <span class="eyebrow">Pastelería Artesanal</span>
+      <h1>Dulce&nbsp;Arte</h1>
+      <p style="max-width:34ch;font-size:17px;opacity:.95">
+        Trazabilidad de pedidos, inventario por BOM, tablero Kanban de cocina
+        y despachos con firma digital.
+      </p>
+    </div>
+    <p class="auth__quote">“Cada pedido tiene su historia: del batido a la puerta.”</p>
+  </aside>
+
+  <section class="auth__form">
+    <div class="auth__box">
+      <span class="eyebrow">Acceso al sistema</span>
+      <h2>Iniciar sesión</h2>
+      <p class="muted" style="font-size:15px">Usa tu usuario y contraseña para continuar.</p>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <ul class="messages"><li class="msg msg--error">Usuario o contraseña incorrectos.</li></ul>
+        {% endif %}
+
+        <div class="field">
+          <label for="id_username">Usuario</label>
+          <input type="text" name="username" id="id_username" autofocus
+                 value="{{ form.username.value|default:'' }}" autocomplete="username" required>
+        </div>
+
+        <div class="field">
+          <label for="id_password">Contraseña</label>
+          <input type="password" name="password" id="id_password"
+                 autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn--primary" style="width:100%;justify-content:center">
+          Entrar al panel
+        </button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

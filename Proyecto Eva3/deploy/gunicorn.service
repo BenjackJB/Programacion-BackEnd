@@ -1,0 +1,31 @@
+# ============================================================================
+# Dulce Arte — servicio systemd para Gunicorn
+# Copiar a:  /etc/systemd/system/gunicorn.service
+#            sudo cp deploy/gunicorn.service /etc/systemd/system/gunicorn.service
+#            sudo systemctl daemon-reload && sudo systemctl enable --now gunicorn
+# ============================================================================
+[Unit]
+Description=Gunicorn daemon — Dulce Arte (Django + DRF)
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/apps
+
+# Variables de entorno (SECRET_KEY, DEBUG=0, DATABASE_URL, ALLOWED_HOSTS...)
+EnvironmentFile=/home/ubuntu/apps/.env
+
+# Ruta corregida: el venv vive en /home/ubuntu/apps/venv
+ExecStart=/home/ubuntu/apps/venv/bin/gunicorn \
+          --workers 3 \
+          --timeout 120 \
+          --bind unix:/home/ubuntu/apps/dulce_arte.sock \
+          dulce_arte.wsgi:application
+
+# Reinicia automáticamente si falla
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

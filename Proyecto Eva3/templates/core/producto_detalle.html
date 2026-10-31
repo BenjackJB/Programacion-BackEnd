@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ producto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">{{ producto.categoria.nombre }}</span>
+    <h1>{{ producto.nombre }}</h1>
+    <p class="muted" style="margin:0">{{ producto.descripcion|default:"Sin descripción." }}</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:productos' %}">← Catálogo</a>
+    <a class="btn" href="{% url 'admin:core_producto_change' producto.pk %}">Editar</a>
+  </div>
+</div>
+
+<div class="grid grid--3" style="margin-top:24px;align-items:start">
+  <div class="card" style="grid-column:span 2">
+    <div class="card__title">Lista de materiales (BOM)</div>
+    {% if producto.componentes.all %}
+    <table class="data">
+      <thead>
+        <tr><th>Insumo</th><th class="right">Cantidad</th><th class="right">P. Unit.</th><th class="right">Costo</th></tr>
+      </thead>
+      <tbody>
+        {% for c in producto.componentes.all %}
+        <tr>
+          <td><a href="{{ c.insumo.get_absolute_url }}">{{ c.insumo.nombre }}</a></td>
+          <td class="right mono">{{ c.cantidad|floatformat:3 }} {{ c.insumo.get_unidad_display }}</td>
+          <td class="right mono">${{ c.insumo.precio_unitario|floatformat:0|intcomma }}</td>
+          <td class="right mono">${{ c.costo_linea|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="3" class="right muted">Costo total de insumos</td>
+            <td class="right mono"><b>${{ producto.costo_insumos|floatformat:0|intcomma }}</b></td></tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <div class="empty" style="padding:32px">
+      <p>Este producto aún no tiene insumos definidos.</p>
+      <a class="btn btn--sm" href="{% url 'admin:core_producto_change' producto.pk %}">Agregar insumos</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card__title">Precio y margen</div>
+      <dl class="deflist">
+        <dt>Precio base</dt><dd class="mono"><b>${{ producto.precio_base|floatformat:0|intcomma }}</b></dd>
+        <dt>Costo insumos</dt><dd class="mono">${{ producto.costo_insumos|floatformat:0|intcomma }}</dd>
+        <dt>Margen</dt>
+        <dd class="mono" style="color:{% if producto.margen >= 0 %}#2e7d32{% else %}#c62828{% endif %}">
+          <b>${{ producto.margen|floatformat:0|intcomma }}</b>
+        </dd>
+        <dt>Unidad</dt><dd>{{ producto.get_unidad_display }}</dd>
+        <dt>Estado</dt><dd>{% if producto.activo %}<span class="badge badge--green">Activo</span>{% else %}<span class="badge badge--gray">Inactivo</span>{% endif %}</dd>
+      </dl>
+    </div>
+
+    <div class="card card--flat">
+      <div class="card__title">Auditoría</div>
+      <dl class="deflist">
+        <dt>Creado</dt><dd>{{ producto.creado|date:"d/m/Y" }}</dd>
+        <dt>Editado</dt><dd>{{ producto.actualizado|date:"d/m/Y H:i" }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

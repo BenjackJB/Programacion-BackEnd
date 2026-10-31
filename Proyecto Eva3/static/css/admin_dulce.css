@@ -1,0 +1,557 @@
+/* ==========================================================================
+   Dulce Arte — Admin Django con design system "Beautiful™"
+   Misma identidad que el frontend: canvas crema · coral · bordes negros 1px
+   botones pill · serif en títulos · mono para etiquetas de sección.
+
+   Nota: este archivo carga DESPUÉS de admin/css/dark_mode.css, por lo que
+   redefinir las variables CSS anula también el modo oscuro del navegador.
+   ========================================================================== */
+
+:root {
+  color-scheme: light; /* fuerza widgets nativos claros */
+
+  /* Paleta Dulce Arte en las variables del admin */
+  --primary: #fa7864;              /* coral: botones y cabeceras */
+  --primary-fg: #ffffff;
+  --secondary: #dc8264;            /* terracotta */
+  --accent: #fff5e6;               /* crema (resaltados) */
+  --body-fg: #000000;
+  --body-bg: #fff5e6;              /* canvas crema */
+  --body-quiet-color: #707070;
+  --body-medium-color: #282828;
+  --body-loud-color: #000000;
+  --header-color: #282828;
+  --header-branding-color: transparent;
+  --header-bg: #fff5e6;
+  --header-link-color: #282828;
+  --breadcrumbs-fg: #707070;
+  --breadcrumbs-link-fg: #000000;
+  --breadcrumbs-bg: #fff5e6;
+  --link-fg: #c0503a;              /* coral legible para texto */
+  --link-hover-color: #282828;
+  --link-selected-fg: #fa7864;
+  --hairline-color: #e8e8e1;
+  --border-color: #000000;         /* bordes negros de 1px */
+  --error-fg: #c62828;
+  --message-success-bg: #e6f3e7;
+  --message-warning-bg: #fff5e6;
+  --message-error-bg: #fdeaea;
+  --darkened-bg: #ffffff;          /* sidebars, thead, filtros */
+  --selected-bg: #fff5e6;
+  --selected-row: #fff3e0;
+  --button-fg: #ffffff;
+  --button-bg: #fa7864;
+  --button-hover-bg: #282828;
+  --default-button-bg: #fa7864;
+  --default-button-hover-bg: #282828;
+  --close-button-bg: #e8e8e1;
+  --close-button-hover-bg: #dc8264;
+  --object-tools-fg: #000000;
+  --object-tools-bg: transparent;
+  --object-tools-hover-bg: #282828;
+}
+
+/* Defensa: aunque Django fije data-theme="dark" por JS, mantenemos la paleta */
+html[data-theme="dark"],
+html[data-theme="light"] {
+  color-scheme: light;
+  --primary: #fa7864;
+  --primary-fg: #ffffff;
+  --secondary: #dc8264;
+  --accent: #fff5e6;
+  --body-fg: #000000;
+  --body-bg: #fff5e6;
+  --body-quiet-color: #707070;
+  --body-medium-color: #282828;
+  --body-loud-color: #000000;
+  --header-color: #282828;
+  --header-branding-color: transparent;
+  --header-bg: #fff5e6;
+  --header-link-color: #282828;
+  --breadcrumbs-fg: #707070;
+  --breadcrumbs-link-fg: #000000;
+  --breadcrumbs-bg: #fff5e6;
+  --link-fg: #c0503a;
+  --link-hover-color: #282828;
+  --hairline-color: #e8e8e1;
+  --border-color: #000000;
+  --error-fg: #c62828;
+  --darkened-bg: #ffffff;
+  --selected-bg: #fff5e6;
+  --selected-row: #fff3e0;
+  --button-fg: #ffffff;
+  --button-bg: #fa7864;
+  --button-hover-bg: #282828;
+  --default-button-bg: #fa7864;
+  --default-button-hover-bg: #282828;
+}
+
+/* ---------------------------------------------------------- tipografía -- */
+body,
+#container,
+.form-row,
+form input,
+form select,
+form textarea,
+table {
+  font-family: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+}
+
+#site-name,
+#site-name a {
+  font-family: "Instrument Serif", Georgia, serif !important;
+  font-size: 27px !important;
+  font-weight: 400 !important;
+  letter-spacing: .2px;
+  text-decoration: none;
+}
+
+#welcome-message,
+.help,
+.helptext,
+.breadcrumb,
+.breadcrumbs,
+.paginator,
+.actionlist,
+th {
+  font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+/* ------------------------------------------------------------- header --- */
+#header {
+  border-bottom: 1px solid #000;
+  padding: 10px 24px;
+}
+
+#branding h1, #branding a { color: #282828; }
+
+#header .help, #welcome-message { font-size: 11.5px; letter-spacing: .04em; }
+
+#header a:hover { color: #c0503a; }
+
+/* ------------------------------------------------------- nav lateral --- */
+#nav-sidebar,
+.nav-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #000;
+}
+
+#nav-sidebar caption,
+.nav-sidebar .module caption,
+#nav-sidebar .module h2 {
+  background: #fa7864;
+  color: #fff;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+#nav-sidebar caption a,
+#nav-sidebar caption .section { color: #fff; text-decoration: none; }
+#nav-sidebar caption a:hover { color: #fff5e6; }
+
+#nav-sidebar tbody th a,
+.nav-sidebar .model a {
+  display: block;
+  color: #282828;
+  font-family: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  padding: 7px 12px;
+  text-decoration: none;
+  transition: background .14s ease, color .14s ease;
+}
+
+#nav-sidebar tbody tr { border-bottom: 1px solid #f0e6d6; }
+
+#nav-sidebar tbody tr:hover th a { background: #fff5e6; color: #c0503a; }
+
+#nav-sidebar tr.current-model th a,
+#nav-sidebar tr.current-model:hover th a {
+  background: #282828;
+  color: #fff5e6;
+}
+
+#nav-sidebar .addlink,
+#grp-sidebar .addlink {
+  color: #2e7d32;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+}
+
+#nav-sidebar .search-box input {
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #fff;
+  font-size: 13px;
+}
+
+/* Toggle de tema de Django: el admin Dulce Arte es siempre claro */
+.theme-toggle { display: none !important; }
+
+/* ---------------------------------------------------------- migas ------ */
+#breadcrumb {
+  border-bottom: 1px solid #000;
+  background: #fff5e6;
+  padding: 8px 24px;
+}
+
+.breadcrumb a { color: #282828; }
+.breadcrumb a:hover { color: #c0503a; }
+.breadcrumb .help { font-size: 11px; color: #707070; }
+
+/* --------------------------------------------------------- contenido --- */
+#content {
+  background: #fff5e6;
+  padding: 24px;
+}
+
+.module,
+fieldset,
+.inline-group {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+  margin-bottom: 20px;
+}
+
+.module > h2,
+.module > caption,
+fieldset > legend,
+.inline-group > h2,
+.form-row > h3,
+.related-widget-wrapper > label {
+  background: #fa7864;
+  color: #fff;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 8px 14px;
+  margin: 0;
+}
+
+/* Encabezados "aligned" del change form: sin banda coral, solo tipografía */
+fieldset.aligned > h2 {
+  background: transparent;
+  color: #282828;
+  border-bottom: 1px solid #e8e8e1;
+  padding-left: 0;
+}
+
+.inline-related > h3 {
+  background: #e8e8e1;
+  color: #282828;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ------------------------------------------------------------ forms ---- */
+form .form-row {
+  padding: 14px 0;
+  border-bottom: 1px solid #f0e6d6;
+}
+
+form .form-row:last-child { border-bottom: 0; }
+
+form label {
+  color: #282828;
+  font-weight: 500;
+  font-size: 13.5px;
+  padding-bottom: 4px;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="password"],
+form input[type="number"],
+form input[type="url"],
+form input[type="search"],
+form input[type="date"],
+form input[type="time"],
+form input[type="datetime-local"],
+form select,
+form textarea,
+form .vTextField,
+form .vDateField,
+form .vTimeField {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+  color: #000;
+  padding: 8px 12px;
+  font-size: 14.5px;
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+  outline: none;
+  border-color: #fa7864;
+  box-shadow: 0 0 0 3px rgba(250, 120, 100, .18);
+  background: #fff;
+}
+
+input[type="checkbox"], input[type="radio"] { accent-color: #fa7864; }
+
+.helptext {
+  font-size: 11px;
+  color: #707070;
+  font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+.errorlist {
+  color: #c62828;
+  font-size: 12.5px;
+  margin: 6px 0 0;
+  padding-left: 16px;
+}
+
+/* ---------------------------------------------------------- botones ---- */
+input[type="submit"],
+.button,
+.submit-row input,
+.buttontype {
+  background: #fa7864;
+  color: #fff;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 6px 20px;
+  font-family: "Space Grotesk", Arial, sans-serif;
+  font-size: 13.5px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+
+input[type="submit"]:hover,
+.button:hover,
+.submit-row input:hover {
+  background: #282828;
+  color: #fff5e6;
+}
+
+.submit-row {
+  background: #fff5e6;
+  border-top: 1px solid #000;
+  padding: 14px 16px;
+  margin: 0;
+}
+
+.submit-row input[type="submit"].default { background: #282828; }
+.submit-row input[type="submit"].default:hover { background: #fa7864; }
+.submit-row a.deletelink {
+  background: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+  border-radius: 999px;
+  padding: 6px 20px;
+  text-decoration: none;
+}
+.submit-row a.deletelink:hover { background: #c62828; color: #fff; }
+
+.object-tools a, a.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #000;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 4px 16px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background .16s ease, color .16s ease;
+}
+
+.object-tools a:hover, a.button:hover { background: #282828; color: #fff5e6; }
+
+/* ------------------------------------------------------- changelist --- */
+#changelist {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+}
+
+#changelist .top {
+  background: #fff5e6;
+  border-bottom: 1px solid #000;
+  padding: 12px 14px;
+}
+
+#changelist-search { display: flex; gap: 8px; align-items: center; }
+#changelist-search label { font-size: 12.5px; color: #707070; }
+#changelist-search input[type="text"] {
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 5px 14px;
+  background: #fff;
+}
+#changelist-search button {
+  background: #fa7864;
+  color: #fff;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 5px 16px;
+  cursor: pointer;
+}
+#changelist-search button:hover { background: #282828; }
+
+#result_list { border-collapse: collapse; width: 100%; }
+
+#result_list thead th,
+.changelist-results th {
+  background: #fff5e6;
+  color: #282828;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid #000;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+#result_list tbody td {
+  border-bottom: 1px solid #f0e6d6;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+
+#result_list tbody tr:hover { background: #fffaf2; }
+#result_list tbody tr:nth-child(even) { background: #fffdf8; }
+#result_list tbody tr:nth-child(even):hover { background: #fff5e6; }
+
+.tfoot td { background: #fff5e6; border-top: 1px solid #000; font-size: 12.5px; }
+
+/* Filtros laterales */
+#changelist-filter {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+  margin-left: 14px;
+  padding: 0;
+}
+
+#changelist-filter h2 {
+  background: #fa7864;
+  color: #fff;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+#changelist-filter h3 {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #707070;
+  padding: 10px 12px 2px;
+  margin: 0;
+}
+
+#changelist-filter ul { list-style: none; margin: 0; padding: 4px 8px 10px; }
+#changelist-filter li { margin: 2px 0; }
+#changelist-filter a {
+  display: inline-block;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 12.5px;
+  text-decoration: none;
+  color: #000;
+}
+#changelist-filter a:hover { background: #282828; color: #fff5e6; }
+#changelist-filter ul li.selected a,
+#changelist-filter li.selected a { background: #fa7864; color: #ffffff !important; border-color: #000; }
+
+.xfilters { list-style: none; margin: 0; padding: 8px 12px; }
+.xfilters li { margin: 3px 0; }
+.xfilters select {
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff;
+  font-size: 12.5px;
+}
+
+/* -------------------------------------------------------- paginación --- */
+.paginator {
+  background: #fff5e6;
+  border-top: 1px solid #000;
+  color: #707070;
+  font-size: 11.5px;
+  padding: 10px 14px;
+}
+
+.paginator a { color: #282828; text-decoration: none; }
+.paginator a:hover { color: #c0503a; }
+.paginator .this-page {
+  background: #fa7864;
+  color: #fff;
+  border: 1px solid #000;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin: 0 2px;
+}
+
+/* ---------------------------------------------------------- mensajes --- */
+.messagelist .message {
+  border: 1px solid #000;
+  border-left-width: 4px;
+  border-radius: 2px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.messagelist .success { border-left-color: #2e7d32; background: #e6f3e7; }
+.messagelist .warning { border-left-color: #fa7864; background: #fff5e6; }
+.messagelist .error   { border-left-color: #c62828; background: #fdeaea; }
+
+/* --------------------------------------------------------- dashboard --- */
+#content-main .module + .module { margin-top: 20px; }
+
+.recent-actions-module ul { list-style: none; margin: 0; padding: 0; }
+.recent-actions-module li {
+  border-bottom: 1px solid #f0e6d6;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+
+/* ------------------------------------------------------------- login --- */
+body.login #container {
+  background: #fff5e6;
+  border: 1px solid #000;
+  border-radius: 2px;
+  max-width: 380px;
+  margin: 8vh auto;
+  padding: 0;
+}
+
+body.login #header {
+  background: transparent;
+  border-bottom: 1px solid #000;
+  text-align: center;
+  padding: 26px 20px 18px;
+}
+
+body.login #content { background: transparent; padding: 26px; }
+
+body.login form .form-row { border-bottom: 0; padding: 8px 0; }
+body.login input[type="submit"] { width: 100%; justify-content: center; padding: 9px; }
+
+/* --------------------------------------------------------- utilidades -- */
+.help-icon, .related-widget-wrapper img { vertical-align: middle; }
+
+#datatable-upload, .inline-add Another { font-size: 13px; }

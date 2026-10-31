@@ -1,0 +1,71 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}Inventario{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Bodega</span>
+    <h1>Insumos e inventario</h1>
+    <p class="muted" style="margin:0">
+      Valor total del inventario: <b class="mono">${{ valor_total|floatformat:0|intcomma }}</b>
+      {% if stock_bajo_total %} · <b style="color:#fa7864">{{ stock_bajo_total }} con stock bajo</b>{% endif %}
+    </p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn--primary" href="{% url 'admin:core_insumo_add' %}">+ Nuevo insumo</a>
+  </div>
+</div>
+
+<form class="filters" data-autosubmit method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar insumo o proveedor…">
+  <div class="chips">
+    <a class="pill pill--sm {% if not solo_bajo %}pill--active{% endif %}" href="?">Todos</a>
+    <a class="pill pill--sm {% if solo_bajo %}pill--active{% endif %}" href="?bajo=1">Solo stock bajo</a>
+  </div>
+</form>
+
+{% if insumos %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Insumo</th><th>Unidad</th><th class="right">Stock actual</th><th class="right">Mínimo</th>
+        <th style="width:140px">Nivel</th><th class="right">P. Unit.</th><th class="right">Valor</th>
+        <th>Proveedor</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in insumos %}
+      {% widthratio i.stock_actual i.stock_minimo 100 as pct %}
+      <tr>
+        <td><a href="{{ i.get_absolute_url }}"><b>{{ i.nombre }}</b></a></td>
+        <td>{{ i.get_unidad_display }}</td>
+        <td class="right mono">{{ i.stock_actual|floatformat:3 }}</td>
+        <td class="right mono muted">{{ i.stock_minimo|floatformat:3 }}</td>
+        <td>
+          <div class="stock-bar">
+            <div class="stock-bar__fill {% if i.stock_bajo %}is-low{% endif %}"
+                 style="width:{% if pct > 100 %}100{% elif pct < 0 %}0{% else %}{{ pct|floatformat:0 }}{% endif %}%"></div>
+          </div>
+          {% if i.stock_bajo %}<span class="badge badge--coral" style="margin-top:5px">Stock bajo</span>{% endif %}
+        </td>
+        <td class="right mono">${{ i.precio_unitario|floatformat:0|intcomma }}</td>
+        <td class="right mono">${{ i.valor_total|floatformat:0|intcomma }}</td>
+        <td class="muted">{{ i.proveedor|default:"—" }}</td>
+        <td class="right"><a class="pill pill--sm" href="{{ i.get_absolute_url }}">Kardex</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty__icon">🧈</div>
+  <h3>Sin insumos{% if q %} para “{{ q }}”{% endif %}</h3>
+  <p>Registra los ingredientes de bodega.</p>
+  <a class="btn btn--primary" href="{% url 'admin:core_insumo_add' %}">Crear insumo</a>
+</div>
+{% endif %}
+{% endblock %}

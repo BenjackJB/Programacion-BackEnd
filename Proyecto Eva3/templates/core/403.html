@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+
+{% block title %}Acceso restringido{% endblock %}
+
+{% block content %}
+<div class="empty">
+  <div class="empty__icon">🔒</div>
+  <h3>Acceso restringido</h3>
+  <p class="muted">
+    Tu rol actual (<b>{{ user_rol|default:"sin perfil" }}</b>) no tiene permiso
+    para esta sección. El tablero Kanban es de cocina/administración y la
+    confirmación de entregas es de despacho/administración.
+  </p>
+  <a class="btn btn--primary" href="{% url 'core:inicio' %}">Volver al panel</a>
+</div>
+{% endblock %}

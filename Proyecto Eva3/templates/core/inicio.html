@@ -1,0 +1,127 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% load core_tags %}
+
+{% block title %}Panel{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Panel de control</span>
+    <h1>Hola, {{ user.first_name|default:user.username }}</h1>
+    <p class="muted" style="margin:0">Estado operativo de la pastelería hoy.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:pedidos' %}">Ver pedidos</a>
+    <a class="btn btn--primary" href="{% url 'core:kanban' %}">Tablero Kanban</a>
+  </div>
+</div>
+
+<section class="section--tight">
+  <div class="grid grid--4">
+    <div class="kpi">
+      <div class="kpi__label">Pedidos totales</div>
+      <div class="kpi__value">{{ pedidos_total }}</div>
+      <div class="kpi__hint">{{ pedidos_recibidos }} recibidos · {{ pedidos_preparacion }} en cocina</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Listos para entregar</div>
+      <div class="kpi__value" style="color:#2e7d32">{{ pedidos_listos }}</div>
+      <div class="kpi__hint">{{ despachos_pendientes }} despachos pendientes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Ingresos acumulados</div>
+      <div class="kpi__value kpi__value--accent">${{ ingresos_totales|floatformat:0|intcomma }}</div>
+      <div class="kpi__hint">sobre todos los pedidos registrados</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Clientes activos</div>
+      <div class="kpi__value">{{ clientes_total }}</div>
+      <div class="kpi__hint">{% if pedidos_atrasados %}<b style="color:#c62828">{{ pedidos_atrasados }} atrasados</b>{% else %}sin pedidos atrasados{% endif %}</div>
+    </div>
+  </div>
+</section>
+
+{% if insumos_stock_bajo %}
+<section class="section--tight">
+  <div class="card" style="border-color:#fa7864">
+    <div class="row row--between">
+      <div>
+        <div class="card__title" style="color:#fa7864">⚠ Alerta de inventario</div>
+        <p style="margin:0">
+          <b>{{ insumos_stock_bajo|length }} insumo{{ insumos_stock_bajo|length|pluralize:"s" }}</b>
+          por debajo del stock mínimo:
+          {% for i in insumos_stock_bajo %}{{ i.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </p>
+      </div>
+      <a class="btn btn--ghost btn--sm" href="{% url 'core:insumos' %}?bajo=1">Reponer ahora</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="row row--between" style="margin-bottom:16px">
+    <h2 style="margin:0">Próximos pedidos</h2>
+    <a class="pill pill--sm" href="{% url 'core:pedidos' %}">Ver todos</a>
+  </div>
+
+  {% if proximos %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Número</th><th>Cliente</th><th>Diseño</th><th>Entrega</th><th>Estado</th><th>Total</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proximos %}
+        <tr>
+          <td class="mono">{{ p.numero }}</td>
+          <td><a href="{{ p.get_absolute_url }}">{{ p.cliente.nombre }}</a></td>
+          <td class="soft" style="max-width:280px">{{ p.descripcion_diseño|truncatechars:60 }}</td>
+          <td class="nowrap">
+            {{ p.fecha_entrega|date:"d/m H:i" }}
+            {% if p.atrasado %}<span class="badge badge--red" style="margin-left:6px">Atrasado</span>{% endif %}
+          </td>
+          <td>{{ p.estado|estado_badge }}</td>
+          <td class="mono nowrap">${{ p.total|floatformat:0|intcomma }}</td>
+          <td class="right"><a class="pill pill--sm" href="{{ p.get_absolute_url }}">Abrir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty__icon">🍰</div>
+    <h3>Sin pedidos en curso</h3>
+    <p>Cuando registres pedidos aparecerán aquí.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <h2>Movimientos recientes de inventario</h2>
+  {% if movimientos %}
+  <div class="grid grid--2">
+    {% for m in movimientos %}
+    <div class="card card--flat">
+      <div class="row row--between">
+        <b>{{ m.insumo.nombre }}</b>
+        <span class="badge {% if m.tipo == 'entrada' %}badge--green{% else %}badge--coral{% endif %}">
+          {% if m.tipo == 'entrada' %}+{% else %}−{% endif %} {{ m.cantidad }}
+        </span>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:14px">
+        {{ m.motivo }}
+        {% if m.registrado_por %} · <span class="mono">{{ m.registrado_por.username }}</span>{% endif %}
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><p style="margin:0">Todavía no hay movimientos registrados.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "core/base.html" %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Despacho {{ despacho.pedido.numero }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Despacho · {{ despacho.pedido.numero }}</span>
+    <h1>{{ despacho.pedido.cliente.nombre }}</h1>
+    <div class="row" style="margin-top:8px">
+      {{ despacho.estado|estado_despacho_badge }}
+      {{ despacho.pedido.estado|estado_badge }}
+      {% if despacho.entregado_en %}<span class="badge badge--green">Entregado {{ despacho.entregado_en|date:"d/m H:i" }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:despachos' %}">← Despachos</a>
+    <a class="btn" href="{% url 'admin:core_despacho_change' despacho.pk %}">Editar</a>
+  </div>
+</div>
+
+<div class="grid grid--2" style="margin-top:24px;align-items:start">
+
+  {# --- Datos de la ruta --- #}
+  <div class="stack">
+    <div class="card">
+      <div class="card__title">Ruta de entrega</div>
+      <dl class="deflist">
+        <dt>Transportista</dt><dd>{{ despacho.transportista|default:"Sin asignar" }}</dd>
+        <dt>Fecha programada</dt><dd>{{ despacho.fecha_programada|date:"d \d\e F, H:i" }}</dd>
+        <dt>Dirección</dt><dd>{{ despacho.direccion }}</dd>
+        <dt>Estado</dt><dd>{{ despacho.estado|estado_despacho_badge }}</dd>
+        <dt>Recibido por</dt><dd>{{ despacho.recibido_por|default:"—" }}</dd>
+        <dt>Entregado en</dt><dd>{{ despacho.entregado_en|date:"d/m/Y H:i"|default:"—" }}</dd>
+      </dl>
+    </div>
+
+    <div class="card card--flat">
+      <div class="card__title">Contenido del pedido</div>
+      <ul class="list-reset stack" style="gap:9px">
+        {% for d in despacho.pedido.detalles.all %}
+        <li class="row row--between" style="border-bottom:1px solid var(--divider);padding-bottom:8px">
+          <span>{{ d.producto.nombre }}</span>
+          <span class="mono">×{{ d.cantidad }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="muted" style="margin:14px 0 0;font-size:14px">
+        Total del pedido: <b class="mono">${{ despacho.pedido.total|floatformat:0|intcomma }}</b>
+      </p>
+    </div>
+
+    {% if despacho.observaciones %}
+    <div class="card card--flat">
+      <div class="card__title">Observaciones</div>
+      <p style="margin:0;white-space:pre-wrap">{{ despacho.observaciones }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# --- Confirmación con firma digital --- #}
+  <div class="card" style="border-color:#fa7864">
+    <div class="card__title" style="color:#fa7864">Confirmación de entrega</div>
+
+    {% if despacho.estado == 'entregado' %}
+      <p><b>Entrega confirmada.</b></p>
+      <dl class="deflist">
+        <dt>Recibido por</dt><dd>{{ despacho.recibido_por }}</dd>
+        <dt>Fecha</dt><dd>{{ despacho.entregado_en|date:"d/m/Y H:i" }}</dd>
+      </dl>
+      {% if despacho.firma_digital %}
+        <div class="card__title" style="margin-top:18px">Firma digital</div>
+        <img src="{{ despacho.firma_digital }}" alt="Firma de entrega"
+             style="width:100%;max-width:360px;background:#fff;border:1px solid #000;padding:8px">
+      {% endif %}
+      {% if despacho.observaciones %}
+        <p class="muted" style="margin-top:14px">{{ despacho.observaciones }}</p>
+      {% endif %}
+    {% elif despacho.puede_entregar and puede_confirmar %}
+      <form method="post" action="">
+        {% csrf_token %}
+        <div class="field">
+          <label for="recibido_por">¿Quién recibe el pedido?</label>
+          <input type="text" id="recibido_por" name="recibido_por" required
+                 placeholder="Nombre de quien firma">
+        </div>
+
+        <div class="field">
+          <label>Firma digital (dibuja aquí)</label>
+          <canvas class="sigpad" id="sigpad"></canvas>
+          <input type="hidden" name="firma_digital" value="">
+          <div class="sigpad__bar">
+            <button type="button" class="btn btn--sm" data-clear-signature>Limpiar</button>
+            <span class="muted" style="font-size:13px;align-self:center">Con mouse o dedo en móvil</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="observaciones">Observaciones (opcional)</label>
+          <textarea id="observaciones" name="observaciones"
+                    placeholder="Detalle de la entrega, incidencias…"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn--primary" style="width:100%;justify-content:center">
+          Confirmar entrega con firma
+        </button>
+      </form>
+    {% else %}
+      <p class="muted">
+        {% if despacho.puede_entregar %}
+          Solo el rol <b>despacho</b> o <b>administración</b> puede confirmar esta entrega.
+        {% else %}
+          Este despacho ya fue entregado o rechazado.
+        {% endif %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

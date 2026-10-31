@@ -1,0 +1,79 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ insumo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Inventario · Kardex</span>
+    <h1>{{ insumo.nombre }}</h1>
+    <div class="row" style="margin-top:8px">
+      <span class="badge {% if insumo.stock_bajo %}badge--coral{% else %}badge--green{% endif %}">
+        {% if insumo.stock_bajo %}Stock bajo{% else %}Stock OK{% endif %}
+      </span>
+      <span class="badge badge--outline">{{ insumo.get_unidad_display }}</span>
+      {% if not insumo.activo %}<span class="badge badge--gray">Inactivo</span>{% endif %}
+    </div>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:insumos' %}">← Inventario</a>
+    <a class="btn" href="{% url 'admin:core_insumo_change' insumo.pk %}">Editar</a>
+  </div>
+</div>
+
+<div class="grid grid--4" style="margin-top:20px">
+  <div class="kpi">
+    <div class="kpi__label">Stock actual</div>
+    <div class="kpi__value {% if insumo.stock_bajo %}kpi__value--accent{% endif %}">{{ insumo.stock_actual|floatformat:3 }}</div>
+    <div class="kpi__hint">mínimo {{ insumo.stock_minimo|floatformat:3 }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi__label">Precio unitario</div>
+    <div class="kpi__value">${{ insumo.precio_unitario|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi__label">Valor en bodega</div>
+    <div class="kpi__value">${{ insumo.valor_total|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi__label">Proveedor</div>
+    <div class="kpi__value" style="font-size:1.5rem;padding-top:8px">{{ insumo.proveedor|default:"—" }}</div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="row row--between" style="margin-bottom:16px">
+    <h2 style="margin:0">Movimientos (kardex)</h2>
+    <span class="mono muted">{{ movimientos|length }} registro{{ movimientos|length|pluralize:"s" }}</span>
+  </div>
+
+  {% if movimientos %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Fecha</th><th>Tipo</th><th class="right">Cantidad</th><th>Motivo</th><th>Pedido</th><th>Usuario</th></tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td class="mono nowrap">{{ m.creado|date:"d/m/Y H:i" }}</td>
+          <td><span class="badge {% if m.tipo == 'entrada' %}badge--green{% else %}badge--coral{% endif %}">{{ m.get_tipo_display }}</span></td>
+          <td class="right mono">{% if m.tipo == 'entrada' %}+{% else %}−{% endif %}{{ m.cantidad|floatformat:3 }}</td>
+          <td>{{ m.motivo }}</td>
+          <td class="mono">{% if m.pedido %}<a href="{{ m.pedido.get_absolute_url }}">{{ m.pedido.numero }}</a>{% else %}—{% endif %}</td>
+          <td class="muted">{{ m.registrado_por|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty__icon">📦</div>
+    <h3>Sin movimientos registrados</h3>
+    <p>Las entradas y salidas aparecerán aquí automáticamente.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+# ============================================================================
+# Dulce Arte — configuración de Nginx (proxy inverso + estáticos)
+# Copiar a:  /etc/nginx/sites-available/dulce_arte
+#            sudo cp deploy/nginx_dulce_arte /etc/nginx/sites-available/dulce_arte
+#            sudo ln -sf /etc/nginx/sites-available/dulce_arte /etc/nginx/sites-enabled/
+#            sudo nginx -t && sudo systemctl restart nginx
+# ============================================================================
+
+server {
+    listen 80;
+    server_name _;
+
+    # Límite para subir comprobantes de despacho (PDF/imágenes)
+    client_max_body_size 15M;
+
+    # Archivos estáticos (CSS/JS del admin y del frontend) — los sirve Nginx
+    location /static/ {
+        alias /home/ubuntu/apps/staticfiles/;
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    # Archivos media (comprobantes subidos, si se usan)
+    location /media/ {
+        alias /home/ubuntu/apps/media/;
+    }
+
+    # Todo lo demás pasa a Gunicorn por el socket
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/home/ubuntu/apps/dulce_arte.sock;
+        proxy_read_timeout 120s;
+    }
+
+    error_log  /var/log/nginx/dulce_arte_error.log;
+    access_log /var/log/nginx/dulce_arte_access.log;
+}

@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}{{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Ficha de cliente</span>
+    <h1>{{ cliente.nombre }}</h1>
+    <div class="row" style="margin-top:8px">
+      {% if cliente.activo %}<span class="badge badge--green">Activo</span>{% else %}<span class="badge badge--gray">Inactivo</span>{% endif %}
+      <span class="badge badge--outline">{{ pedidos|length }} pedido{{ pedidos|length|pluralize }}</span>
+    </div>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:clientes' %}">← Clientes</a>
+    <a class="btn" href="{% url 'admin:core_cliente_change' cliente.pk %}">Editar</a>
+  </div>
+</div>
+
+<div class="grid grid--2" style="margin-top:24px;align-items:start">
+  <div class="card">
+    <div class="card__title">Datos de contacto</div>
+    <dl class="deflist">
+      <dt>Correo</dt><dd>{{ cliente.email|default:"—" }}</dd>
+      <dt>Teléfono</dt><dd class="mono">{{ cliente.telefono|default:"—" }}</dd>
+      <dt>Dirección</dt><dd>{{ cliente.direccion|default:"—" }}</dd>
+      <dt>Comuna</dt><dd>{{ cliente.comuna|default:"—" }}</dd>
+      <dt>Notas</dt><dd>{{ cliente.notas|default:"Sin notas." }}</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card__title">Historial de pedidos</div>
+    {% if pedidos %}
+    <ul class="list-reset stack">
+      {% for p in pedidos %}
+      <li class="row row--between" style="border-bottom:1px solid var(--divider);padding-bottom:10px">
+        <div>
+          <a href="{{ p.get_absolute_url }}"><b class="mono">{{ p.numero }}</b></a>
+          <div class="muted" style="font-size:13.5px">{{ p.descripcion_diseño|truncatechars:52 }}</div>
+        </div>
+        <div class="right nowrap">
+          {{ p.estado|estado_badge }}
+          <div class="mono" style="font-size:13px;margin-top:5px">${{ p.total|floatformat:0|intcomma }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0">Este cliente aún no tiene pedidos.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

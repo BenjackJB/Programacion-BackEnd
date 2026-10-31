@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Despachos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Rutas de entrega</span>
+    <h1>Despachos</h1>
+    <p class="muted" style="margin:0">Gestión de rutas con confirmación mediante firma digital o comprobante.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn--primary" href="{% url 'admin:core_despacho_add' %}">+ Nuevo despacho</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <div class="chips">
+    <a class="pill pill--sm {% if not estado_activa %}pill--active{% endif %}" href="?">Todos</a>
+    {% for clave, etiqueta in estados %}
+      <a class="pill pill--sm {% if estado_activa == clave %}pill--active{% endif %}"
+         href="?estado={{ clave }}">{{ etiqueta }}</a>
+    {% endfor %}
+  </div>
+</form>
+
+{% if despachos %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Transportista</th>
+        <th>Programado</th><th>Estado</th><th>Firma</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in despachos %}
+      <tr>
+        <td class="mono"><a href="{{ d.pedido.get_absolute_url }}">{{ d.pedido.numero }}</a></td>
+        <td>{{ d.pedido.cliente.nombre }}</td>
+        <td class="soft" style="max-width:230px">{{ d.direccion|truncatechars:48 }}</td>
+        <td class="muted">{{ d.transportista|default:"—" }}</td>
+        <td class="nowrap">{{ d.fecha_programada|date:"d/m H:i" }}</td>
+        <td>{{ d.estado|estado_despacho_badge }}</td>
+        <td>{% if d.firma_digital or d.comprobante %}<span class="badge badge--green">Firmado</span>{% else %}<span class="badge badge--gray">Pendiente</span>{% endif %}</td>
+        <td class="right"><a class="pill pill--sm" href="{{ d.get_absolute_url }}">Abrir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty__icon">🚚</div>
+  <h3>Sin despachos{% if estado_activa %} en este estado{% endif %}</h3>
+  <p>Crea un despacho para un pedido desde el administrador.</p>
+  <a class="btn btn--primary" href="{% url 'admin:core_despacho_add' %}">Crear despacho</a>
+</div>
+{% endif %}
+{% endblock %}

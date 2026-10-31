@@ -1,0 +1,68 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dulce Arte{% endblock %} · Pastelería Artesanal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% if user.is_authenticated %}
+<header class="nav">
+  <div class="nav__inner container">
+    <nav class="nav__links" aria-label="Principal">
+      <a class="pill {% if request.resolver_match.url_name == 'inicio' %}pill--active{% endif %}" href="{% url 'core:inicio' %}">Panel</a>
+      {% if user_rol == 'cocina' or user_rol == 'admin' %}
+      <a class="pill {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name in 'pedidos,pedido_detalle,kanban' %}pill--active{% endif %}" href="{% url 'core:kanban' %}">Kanban</a>
+      {% endif %}
+      <a class="pill {% if request.resolver_match.url_name == 'pedidos' %}pill--active{% endif %}" href="{% url 'core:pedidos' %}">Pedidos</a>
+      <a class="pill {% if request.resolver_match.url_name in 'insumos,insumo_detalle' %}pill--active{% endif %}" href="{% url 'core:insumos' %}">Inventario</a>
+      <a class="pill {% if request.resolver_match.url_name in 'productos,producto_detalle' %}pill--active{% endif %}" href="{% url 'core:productos' %}">Catálogo</a>
+      <a class="pill {% if request.resolver_match.url_name in 'clientes,cliente_detalle' %}pill--active{% endif %}" href="{% url 'core:clientes' %}">Clientes</a>
+      <a class="pill {% if request.resolver_match.url_name in 'despachos,despacho_detalle' %}pill--active{% endif %}" href="{% url 'core:despachos' %}">Despachos</a>
+    </nav>
+
+    <a class="nav__logo" href="{% url 'core:inicio' %}">Dulce&nbsp;Arte</a>
+
+    <div class="nav__right">
+      {% if user.is_staff %}
+        <a class="pill pill--quiet" href="{% url 'admin:index' %}" title="Django Admin">Admin</a>
+      {% endif %}
+      <span class="nav__user">{{ user.first_name|default:user.username }}</span>
+      <a class="pill pill--quiet" href="{% url 'core:logout' %}">Salir</a>
+    </div>
+  </div>
+</header>
+{% endif %}
+
+<main class="{% block main_class %}container{% endblock %}">
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="msg msg--{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% if user.is_authenticated %}
+<footer class="footer">
+  <div class="container footer__inner">
+    <span class="eyebrow">Dulce Arte · Pastelería Artesanal</span>
+    <span class="footer__meta">Sistema de trazabilidad y pedidos — EVA 3 · Desarrollo Backend</span>
+  </div>
+</footer>
+{% endif %}
+
+<script src="{% static 'js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Tablero Kanban{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Flujo de cocina</span>
+    <h1>Tablero Kanban</h1>
+    <p class="muted" style="margin:0">
+      Arrastra una tarjeta o usa las flechas. Solo se avanza un paso a la vez.
+    </p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{% url 'core:pedidos' %}">Lista de pedidos</a>
+  </div>
+</div>
+
+<div class="filters" style="padding-bottom:6px">
+  <span class="mono muted">Recibido → En Preparación → Horneado/Decorado → Control de Calidad → Listo</span>
+</div>
+
+<div class="kanban" data-kanban>
+  {% for col in columnas %}
+  <section class="kanban__col" data-estado="{{ col.clave }}">
+    <header class="kanban__head">
+      <span class="kanban__title">{{ col.etiqueta }}</span>
+      <span class="kanban__count">{{ col.pedidos|length }}</span>
+    </header>
+
+    <div class="kanban__body">
+      {% for p in col.pedidos %}
+      <article class="kcard" data-id="{{ p.pk }}" data-estado="{{ col.clave }}">
+        <div class="kcard__top">
+          <a class="kcard__num" href="{{ p.get_absolute_url }}" style="text-decoration:none">{{ p.numero }}</a>
+          {{ p.prioridad|prioridad_badge }}
+        </div>
+        <div class="kcard__cliente">{{ p.cliente.nombre }}</div>
+        <div class="kcard__meta">
+          📅 {{ p.fecha_entrega|date:"d/m · H:i" }}
+          {% if p.atrasado %}<b style="color:#c62828"> · atrasado</b>{% endif %}
+        </div>
+        <div class="kcard__desc">{{ p.descripcion_diseño }}</div>
+        <div class="kcard__meta" style="margin-top:8px">
+          <b class="mono">${{ p.total|floatformat:0|intcomma }}</b>
+          · {{ p.detalles.all|length }} ítem{{ p.detalles.all|length|pluralize }}
+        </div>
+
+        <div class="kcard__foot">
+          {% if p.puede_avanzar %}
+            <button class="btn btn--sm btn--primary kcard__foot-main" data-move="avanzar" data-id="{{ p.pk }}">
+              {% if p.estado == 'listo' %}Listo{% else %}Avanzar →{% endif %}
+            </button>
+          {% else %}
+            <span class="badge badge--green kcard__foot-main">Completado</span>
+          {% endif %}
+          <div class="kcard__foot-row">
+            {% if p.puede_retroceder %}
+              <button class="btn btn--sm" data-move="retroceder" data-id="{{ p.pk }}" title="Retroceder">←</button>
+            {% endif %}
+            <a class="btn btn--sm" href="{{ p.get_absolute_url }}" title="Ver detalle">Ver</a>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+        <div class="kanban__empty">Sin pedidos</div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
