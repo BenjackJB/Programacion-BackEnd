@@ -2,10 +2,10 @@
 
 > **Evaluación Parcial N°3 · Desarrollo Backend** — Aplicación web fullstack con **Django + Django REST Framework**, **PostgreSQL** y despliegue en **AWS EC2**.
 
-🌐 **Aplicación en línea:** `http://<IP_ELÁSTICA>/` *(se completa el domingo al asignar la IP elástica)*
+🌐 **Aplicación en línea:** `http://52.22.195.173/` *(IP elástica fija — asociada el 02-11-2026)*
 
-🖥️ **Django Admin:** `http://<IP_ELÁSTICA>/django-admin/`
-🔌 **API REST:** `http://<IP_ELÁSTICA>/api/`
+🖥️ **Django Admin:** `http://52.22.195.173/django-admin/`
+🔌 **API REST:** `http://52.22.195.173/api/`
 
 ---
 
@@ -63,10 +63,10 @@ El sistema resuelve:
 | Lenguaje | Python 3.11+ |
 | Framework backend | Django 5.2 |
 | API REST | Django REST Framework 3.16 |
-| Base de datos | PostgreSQL 14+ (AWS) · SQLite (desarrollo local) |
+| Base de datos | PostgreSQL 16 (EC2) · SQLite (desarrollo local) |
 | Servidor WSGI | Gunicorn |
 | Servidor web / proxy | Nginx (proxy inverso + estáticos) |
-| Infraestructura | AWS EC2 (Ubuntu 22.04 LTS, t2.micro) + IP elástica |
+| Infraestructura | AWS EC2 (Ubuntu 24.04 LTS, t3.micro) + IP elástica |
 | Frontend | HTML/CSS/JS (Django templates) — sin frameworks pesados |
 | Firma digital | Canvas HTML5 + JavaScript |
 
@@ -221,11 +221,11 @@ Abrir `http://127.0.0.1:8000/` e iniciar sesión con `admin` / `admin1234`.
 ### ETAPA 1 — Lanzar la instancia
 
 1. Consola AWS → **EC2** → *Lanzar instancia*.
-2. **AMI:** Ubuntu Server 22.04 LTS (x64).
-3. **Tipo:** `t2.micro` (capa gratuita).
+2. **AMI:** Ubuntu Server 24.04 LTS (x64).
+3. **Tipo:** `t3.micro` (capa gratuita).
 4. **Key Pair:** crea o usa uno existente (`claves.pem`).
 5. **Red:** usa la VPC por defecto y **habilita IP pública automática**.
-6. **Grupo de seguridad:** abre **SSH (22)** desde tu IP y **HTTP (80)** desde cualquier IP.
+6. **Grupo de seguridad:** abre **SSH (22)**, **HTTP (80)** y **HTTPS (443)** desde cualquier IP *(el 443 evita que el navegador se quede en timeout si alguien escribe la IP sin `http://`)*.
 7. Crea la instancia.
 
 ### ETAPA 2 — Conectarte (desde Windows)
